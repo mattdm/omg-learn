@@ -1,0 +1,25 @@
+{
+  "name": "omg-learn",
+  "version": "1.0.0",
+  "description": "AI skill for learning from user corrections triggered by 'omg!' expressions",
+  "type": "ai-skill",
+  "main": "SKILL.md",
+  "keywords": ["ai", "skill", "learning", "corrections", "agent"],
+  "author": "Open Source",
+  "license": "Unlicense",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/omg-learn.git"
+  },
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "package.json"
+  ],
+  "dependencies": {
+    "skill-creator": "^1.0.0"
+  },
+  "engines": {
+    "openskills": ">=1.0.0"
+  }
+}
