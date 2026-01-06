@@ -32,7 +32,32 @@ openskills sync -y
 
 ## Usage
 
-When a user says "omg!" during a correction, the AI will:
+### Recommended: Create a Custom Command
+
+Instead of relying on "omg!" detection, we recommend creating an explicit command in your editor. This is clearer and more reliable.
+
+**For Cursor**, create `.cursor/commands/omg.md`:
+```markdown
+Oh no! You just did something bad. You'll need to fix that, but FIRST let's make sure that you learn and don't do it again. Everyone makes mistakes, but it's frustrating to never learn. Luckily, you CAN learn.
+
+1. Run `openskills read omg-learn` and follow that process.
+2. git commit the new skill
+  * unstage other changes if necessary (but do not lose them!)
+  * add and commit just the skill changes or additions
+  * if on a branch, if possible, cherry-pick that to `main`
+  * re-stage anything else uncommited
+3. now, using the new skill, correct the mistake
+4. and back to your regular work, smarter and wiser
+```
+
+**For Claude Code**, invoke directly:
+```
+/omg-learn
+```
+
+### Alternative: "omg!" Detection
+
+If you prefer, the AI can also detect when you say "omg!" during a correction:
 
 1. **Analyze the correction** - Identify what went wrong
 2. **Check for global intent** - Determine if it should be global or project-local
@@ -41,24 +66,10 @@ When a user says "omg!" during a correction, the AI will:
 5. **Create/update skill** - After user approval
 6. **Register the skill** - Run `openskills sync -y`
 
-## Example
-
-```
-User: "omg! The config file is at ~/.config/myapp/settings.json, not ~/.myapp/config.json"
-
-AI Response:
-1. Loads skill-creator skill
-2. Analyzes: Wrong config file location assumption
-3. Proposes creating .agent/skills/myapp-config-locations/SKILL.md
-4. Shows full skill content for approval
-5. Creates skill after approval
-6. Runs openskills sync
-```
-
 ## Dependencies
 
 - `skill-creator` skill must be available
-- `openskills` command for registration
+- [`openskills`](https://github.com/numman-ali/openskills) command for registration
 
 ## Structure
 
@@ -66,6 +77,15 @@ This skill follows the standard skill format:
 - `SKILL.md` - Main skill file with YAML frontmatter
 - Progressive disclosure principle
 - Concise, action-oriented content
+
+## Best Practices
+
+**Keep your base instructions minimal.** Too many instructions dilute their impact:
+
+- **AGENTS.md**: Include only your project's MOST CRUCIAL guidance. Add up-front detail on how to load skills on demand (e.g., "Run `openskills read <skill-name>` when you need specific knowledge"). Let skills handle the details.
+- **Cursor Rules**: Same principle - too many rules and they lose weight. Keep it focused.
+
+Skills are meant to be loaded on-demand for specific situations, keeping your agent's base context clean and effective.
 
 ## License
 
