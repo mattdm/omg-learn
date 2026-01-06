@@ -68,7 +68,7 @@ If you prefer, the AI can also detect when you say "omg!" during a correction:
 
 ## Dependencies
 
-- `skill-creator` skill must be available
+- [`skill-creator`](https://github.com/anthropics/skills/tree/main/skills/skill-creator) skill must be available
 - [`openskills`](https://github.com/numman-ali/openskills) command for registration
 
 ## Structure
