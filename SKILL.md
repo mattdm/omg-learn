@@ -19,6 +19,10 @@ When user says "omg!" during a correction:
 - What is the correct behavior/information?
 - What knowledge should be preserved?
 
+**Important**: When creating the skill description, include specific trigger contexts.
+Think about WHEN the skill should activate - situations, actions, or tasks.
+Examples: "Use when building/running project", "Use when analyzing database code", "When you have deployment questions"
+
 ### 2. Check for Global Intent
 
 If user says "globally", "system wide", "everywhere", or similar:
