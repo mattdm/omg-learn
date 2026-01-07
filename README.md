@@ -12,23 +12,62 @@ This skill provides a structured workflow for:
 
 ## Installation
 
-### As a Global Skill
+Choose the installation method for your platform. All methods work equally well!
+
+### Claude Code
+
+Skills are auto-discovered from skills directories - just copy and go!
+
+**Global (all projects):**
 ```bash
-# Copy to your global skills directory
+cp -r omg-learn ~/.claude/skills/
+```
+
+**Project-specific:**
+```bash
+mkdir -p .claude/skills
+cp -r omg-learn .claude/skills/
+git add .claude/skills/omg-learn
+git commit -m "Add omg-learn skill"
+```
+
+### OpenSkills
+
+**Global:**
+```bash
 cp -r omg-learn ~/.agent/skills/
-
-# Register the skill
 openskills sync -y
 ```
 
-### As a Project Skill
+**Project-specific:**
 ```bash
-# Copy to your project's skills directory
 cp -r omg-learn .agent/skills/
-
-# Register the skill
 openskills sync -y
 ```
+
+### Cursor
+
+**Global:**
+```bash
+cp -r omg-learn ~/.agent/skills/
+openskills sync -y
+```
+
+**Project-specific:**
+```bash
+cp -r omg-learn .agent/skills/
+openskills sync -y
+```
+
+### Mixed Teams (Multiple Tools)
+
+If your team uses different tools, use symlinks for compatibility:
+```bash
+# In your project root
+ln -s .claude/skills .agent/skills  # Or vice versa
+```
+
+This allows Claude Code users to use `.claude/skills/` while OpenSkills/Cursor users use `.agent/skills/` - they point to the same location.
 
 ## Usage
 
@@ -50,10 +89,34 @@ Oh no! You just did something bad. You'll need to fix that, but FIRST let's make
 4. and back to your regular work, smarter and wiser
 ```
 
-**For Claude Code**, invoke directly:
-```
-/omg-learn
-```
+**For Claude Code:**
+
+Create a deliberate workflow when you make a mistake that should be learned:
+
+1. **Invoke the skill:**
+   ```
+   /omg-learn
+   ```
+   Or let Claude detect "omg!" in your corrections
+
+2. **Follow the guided process:**
+   - Claude analyzes what went wrong
+   - Determines if skill should be global or project-local
+   - Checks for existing skills to update
+   - Proposes the new/updated skill content
+   - Creates the skill file after your approval
+   - Skill is immediately available (auto-discovered)
+
+3. **Commit the skill (for project skills):**
+   ```bash
+   git add .claude/skills/<skill-name>
+   git commit -m "Add <skill-name> skill: <brief description>"
+   ```
+
+4. **Use the new skill:**
+   Claude now has persistent knowledge and won't make that mistake again!
+
+**Tip:** For team projects, commit skills to version control so everyone benefits from the learning.
 
 ### Alternative: "omg!" Detection
 
@@ -68,8 +131,14 @@ If you prefer, the AI can also detect when you say "omg!" during a correction:
 
 ## Dependencies
 
-- [`skill-creator`](https://github.com/anthropics/skills/tree/main/skills/skill-creator) skill must be available
-- [`openskills`](https://github.com/numman-ali/openskills) command for registration
+**All Platforms:**
+- [`skill-creator`](https://github.com/anthropics/skills/tree/main/skills/skill-creator) skill
+  - Pre-installed in Claude Code
+  - Install separately for OpenSkills/Cursor
+
+**Platform-Specific:**
+- **OpenSkills/Cursor**: [`openskills`](https://github.com/numman-ali/openskills) CLI tool
+- **Claude Code**: No additional tools needed (built-in skill support)
 
 ## Structure
 

@@ -11,7 +11,9 @@ When the user says "omg!" (case-insensitive) while correcting you, create or upd
 
 **ALWAYS load the skill-creator skill before creating any skill:**
 
-Read the skill file: `.agent/skills/skill-creator/SKILL.md`
+**Load the skill-creator skill:**
+- **Claude Code**: Use `Skill("skill-creator")` or it may already be in context
+- **OpenSkills/Cursor**: Read `.agent/skills/skill-creator/SKILL.md`
 
 The skill-creator provides complete guidance on skill structure, progressive disclosure, and best practices.
 
@@ -48,8 +50,14 @@ Search the appropriate location for related skills:
 
 Create or update the skill file at the specified location.
 
-### 6. Run openskills sync
+### 6. Register the Skill
 
+**For Claude Code:**
+- Skills in `~/.claude/skills/` (global) or `.claude/skills/` (project) are automatically discovered
+- No sync needed - the skill is immediately available
+- Consider committing the skill to version control (see README for workflow)
+
+**For OpenSkills/Cursor:**
 Update AGENTS.md (or global registry) with the new/updated skill:
 
 ```bash
@@ -122,26 +130,35 @@ Prefer concise examples over verbose explanations.
 
 ## Storage Locations
 
-- **Project skills**: `.agent/skills/<name>/SKILL.md` (version controlled with this project)
-- **Global skills**: `~/.agent/skills/<name>/SKILL.md` (applies to all projects)
+**Claude Code:**
+- Project: `.claude/skills/<name>/SKILL.md`
+- Global: `~/.claude/skills/<name>/SKILL.md`
 
-Note: `.claude/skills` is a symlink to `.agent/skills` for compatibility with different AI agents.
+**OpenSkills/Cursor:**
+- Project: `.agent/skills/<name>/SKILL.md`
+- Global: `~/.agent/skills/<name>/SKILL.md`
+
+**Mixed teams:** Symlink `.claude/skills` ↔ `.agent/skills` so all tools access the same skills.
 
 ## Example Workflow
 
 User: "omg! This project uses a custom binary location, it's at target/x86_64-unknown-linux-musl/release/myapp"
 
-Your response:
-1. Load skill-creator skill
+**Your response:**
+1. Load skill-creator skill (via Skill tool in Claude Code, or file read in OpenSkills)
 2. Analyze: You looked in wrong location for binary
 3. Check: No existing skill about binary locations for this project
-4. Propose: Creating `.agent/skills/binary-locations/SKILL.md` with proper frontmatter
+4. Propose: Creating skill at appropriate location (`.claude/skills/` for Claude Code, `.agent/skills/` for OpenSkills)
 5. Show the full content for approval
 6. After approval: Create the skill file
-7. Run `openskills sync -y` to register it
+7. Register:
+   - **Claude Code**: Skill auto-discovered, ready to use
+   - **OpenSkills**: Run `openskills sync -y` to register
+
+**For Claude Code users:** After creating the skill, commit it to version control so team members can use it.
 
 ## Registration
 
 After creating/updating a skill:
-- Project skills: Automatically registered in `AGENTS.md` via `openskills sync`
-- Global skills: Registered in `~/.agent/skills/registry.md` (or equivalent)
+- **Claude Code**: Skills are auto-discovered from `.claude/skills/` directories
+- **OpenSkills/Cursor**: Registered in `AGENTS.md` via `openskills sync`

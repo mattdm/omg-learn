@@ -1,10 +1,10 @@
 {
   "name": "omg-learn",
   "version": "1.0.0",
-  "description": "AI skill for learning from user corrections triggered by 'omg!' expressions",
+  "description": "AI skill for learning from user corrections triggered by 'omg!' expressions. Works with Claude Code, OpenSkills, and Cursor.",
   "type": "ai-skill",
   "main": "SKILL.md",
-  "keywords": ["ai", "skill", "learning", "corrections", "agent"],
+  "keywords": ["ai", "skill", "learning", "corrections", "agent", "claude-code", "openskills", "cursor"],
   "author": "Open Source",
   "license": "Unlicense",
   "repository": {
@@ -21,5 +21,13 @@
   },
   "engines": {
     "openskills": ">=1.0.0"
+  },
+  "peerDependencies": {
+    "openskills": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "openskills": {
+      "optional": true
+    }
   }
 }
