@@ -31,6 +31,36 @@ git add .claude/skills/omg-learn
 git commit -m "Add omg-learn skill"
 ```
 
+### Goose
+
+Skills are auto-discovered from multiple skill directories - just copy to any of them!
+
+**Global (all projects) - choose one:**
+```bash
+# Preferred - compatible with Claude Code
+cp -r omg-learn ~/.claude/skills/
+
+# Or Goose-specific locations
+cp -r omg-learn ~/.config/goose/skills/
+cp -r omg-learn ~/.config/agents/skills/
+```
+
+**Project-specific - choose one:**
+```bash
+# Preferred - compatible with Claude Code
+mkdir -p .claude/skills
+cp -r omg-learn .claude/skills/
+
+# Or Goose-specific locations
+mkdir -p .goose/skills
+cp -r omg-learn .goose/skills/
+
+mkdir -p .agents/skills
+cp -r omg-learn .agents/skills/
+```
+
+**Tip:** Use `.claude/skills/` for maximum compatibility across platforms!
+
 ### OpenSkills
 
 **Global:**
@@ -63,11 +93,13 @@ openskills sync -y
 
 If your team uses different tools, use symlinks for compatibility:
 ```bash
-# In your project root
-ln -s .claude/skills .agent/skills  # Or vice versa
+# In your project root - choose the pattern that works for your team
+ln -s .claude/skills .agent/skills   # OpenSkills/Cursor ← Claude Code
+ln -s .claude/skills .goose/skills   # Goose ← Claude Code
+ln -s .goose/skills .agent/skills    # OpenSkills ← Goose
 ```
 
-This allows Claude Code users to use `.claude/skills/` while OpenSkills/Cursor users use `.agent/skills/` - they point to the same location.
+**Recommendation:** Use `.claude/skills/` as your primary location since it's supported by both Claude Code and Goose (Goose checks `.claude/skills/` first). Then symlink for other tools as needed.
 
 ## Usage
 
@@ -118,6 +150,32 @@ Create a deliberate workflow when you make a mistake that should be learned:
 
 **Tip:** For team projects, commit skills to version control so everyone benefits from the learning.
 
+**For Goose:**
+
+Goose automatically discovers and loads skills - just invoke when you need it:
+
+1. **Trigger the skill:**
+   - Say "omg!" during a correction (Goose will auto-detect and match the skill)
+   - Or explicitly request: "Use the omg-learn skill"
+
+2. **Follow the guided workflow:**
+   - Goose analyzes the correction and determines what knowledge to preserve
+   - Proposes creating or updating a skill with proper structure
+   - Shows the full skill content for your approval
+   - Creates the skill file after approval
+   - Skill is immediately available (auto-discovered on next session)
+
+3. **Commit for team sharing (project skills):**
+   ```bash
+   git add .claude/skills/<skill-name>  # or .goose/skills/
+   git commit -m "Add <skill-name> skill: <brief description>"
+   ```
+
+4. **Benefit from persistent learning:**
+   Goose now has this knowledge permanently and won't make the same mistake!
+
+**Note:** Goose loads skills at session start, so restart your session or explicitly invoke to use new skills immediately.
+
 ### Alternative: "omg!" Detection
 
 If you prefer, the AI can also detect when you say "omg!" during a correction:
@@ -133,12 +191,12 @@ If you prefer, the AI can also detect when you say "omg!" during a correction:
 
 **All Platforms:**
 - [`skill-creator`](https://github.com/anthropics/skills/tree/main/skills/skill-creator) skill
-  - Pre-installed in Claude Code
+  - Pre-installed in Claude Code and Goose
   - Install separately for OpenSkills/Cursor
 
 **Platform-Specific:**
 - **OpenSkills/Cursor**: [`openskills`](https://github.com/numman-ali/openskills) CLI tool
-- **Claude Code**: No additional tools needed (built-in skill support)
+- **Claude Code/Goose**: No additional tools needed (built-in skill support)
 
 ## Structure
 
