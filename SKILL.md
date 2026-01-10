@@ -18,10 +18,17 @@ When user says "omg!" during a correction:
 - What did you do wrong?
 - What is the correct behavior/information?
 - What knowledge should be preserved?
+- **Could a hook have prevented this?** What tool was involved?
 
 **Important**: When creating the skill description, include specific trigger contexts.
 Think about WHEN the skill should activate - situations, actions, or tasks.
 Examples: "Use when building/running project", "Use when analyzing database code", "When you have deployment questions"
+
+**CRITICAL**: Think about **actionable hooks** that could catch this mistake:
+- If the mistake involved running a command: Add a `PreToolUse` hook for `Bash`
+- If the mistake was writing to wrong file: Add a `PreToolUse` hook for `Write`
+- If the mistake was editing incorrectly: Add a `PreToolUse` hook for `Edit`
+- If validation is needed after an action: Add a `PostToolUse` hook
 
 ### 2. Check for Global Intent
 
@@ -40,6 +47,8 @@ Search the appropriate location for related skills:
 
 - For updates: Show before/after diff
 - For new skills: Show the full content with frontmatter
+- **Always show hooks** if they're part of the solution
+- Explain what the hook checks and when it triggers
 - Indicate storage location (global vs project-local)
 
 ### 5. After Approval: Create or Update
@@ -61,7 +70,8 @@ skill-name/
 └── SKILL.md (required)
     ├── YAML frontmatter (REQUIRED!)
     │   ├── name: skill-name (REQUIRED)
-    │   └── description: ... (REQUIRED)
+    │   ├── description: ... (REQUIRED)
+    │   └── hooks: ... (OPTIONAL but POWERFUL!)
     └── Markdown body with instructions
 ```
 
@@ -71,6 +81,13 @@ skill-name/
 ---
 name: skill-name
 description: Comprehensive description of what the skill does AND when to use it. Include triggers, contexts, and use cases. This is the PRIMARY triggering mechanism - be thorough!
+hooks:
+  PreToolUse:
+    - matcher: "ToolName"
+      hooks:
+        - type: command
+          command: "./scripts/check-behavior.sh $TOOL_INPUT"
+          once: true
 ---
 ```
 
@@ -79,6 +96,100 @@ description: Comprehensive description of what the skill does AND when to use it
 - Skills without frontmatter won't be listed in the skills table in AGENTS.md
 - Description must include BOTH what the skill does AND when to use it
 - Don't put "when to use" in the body - it's only loaded AFTER triggering
+
+### Hooks: Your Safety Net for Catching Mistakes
+
+**IMPORTANT**: When the user says "omg!" about a mistake, consider if a **hook** could have caught it!
+
+Hooks run during the skill's lifecycle and can **intercept** actions before they happen:
+
+- **PreToolUse**: Runs BEFORE a tool is used (can block unwanted actions)
+- **PostToolUse**: Runs AFTER a tool completes (can validate results)
+- **Stop**: Runs when the skill finishes
+
+**Available environment variables in hooks**:
+- `$TOOL_INPUT`: The input being passed to the tool
+- `$TOOL_NAME`: Name of the tool being called
+
+**Hook examples that prevent mistakes**:
+
+```yaml
+# Example 1: Prevent committing to wrong branch
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "bash -c 'if [[ \"$TOOL_INPUT\" == *\"git commit\"* ]]; then branch=$(git branch --show-current); if [[ \"$branch\" == \"main\" ]]; then echo \"ERROR: Direct commits to main not allowed\"; exit 1; fi; fi'"
+
+# Example 2: Validate file paths before writing
+hooks:
+  PreToolUse:
+    - matcher: "Write"
+      hooks:
+        - type: command
+          command: "./scripts/validate-write-path.sh $TOOL_INPUT"
+
+# Example 3: Check for secrets before committing
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "bash -c 'if [[ \"$TOOL_INPUT\" == *\"git add\"* ]]; then git diff --cached | grep -qE \"(API_KEY|SECRET|PASSWORD)\" && echo \"WARNING: Possible secrets detected\" && exit 1 || exit 0; fi'"
+```
+
+**When designing a skill from an "omg!" moment**:
+
+1. **Identify the mistake**: What tool was used incorrectly?
+2. **Design a hook matcher**: Which tool needs interception? (Bash, Write, Edit, etc.)
+3. **Write validation logic**: What check would have caught this?
+4. **Add to frontmatter**: Include the hook in the YAML
+
+Hooks are **scoped to the skill** - they only run when the skill is active and are automatically cleaned up when done.
+
+### Common Hook Patterns for Catching Mistakes
+
+**Pattern 1: Validate before running commands**
+```yaml
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "bash -c '[[ \"$TOOL_INPUT\" == *\"dangerous-command\"* ]] && echo \"Blocked!\" && exit 1'"
+```
+
+**Pattern 2: Check file paths before writing**
+```yaml
+hooks:
+  PreToolUse:
+    - matcher: "Write"
+      hooks:
+        - type: command
+          command: "bash -c 'echo \"$TOOL_INPUT\" | grep -q \"forbidden/path\" && echo \"Cannot write to forbidden path\" && exit 1'"
+```
+
+**Pattern 3: Validate after editing**
+```yaml
+hooks:
+  PostToolUse:
+    - matcher: "Edit"
+      hooks:
+        - type: command
+          command: "./scripts/lint-file.sh"
+```
+
+**Pattern 4: One-time setup check**
+```yaml
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "./scripts/check-dependencies.sh"
+          once: true
+```
 
 ### Optional Bundled Resources
 
@@ -114,17 +225,53 @@ Challenge each piece of information:
 
 Prefer concise examples over verbose explanations.
 
-## Example Workflow
+## Example Workflows
+
+### Example 1: Binary Location Mistake
 
 User: "omg! This project uses a custom binary location, it's at target/x86_64-unknown-linux-musl/release/myapp"
 
 **Your response:**
 1. Load skill-creator skill
 2. Analyze: You looked in wrong location for binary
-3. Check: No existing skill about binary locations for this project
-4. Propose: Creating skill at appropriate location
-5. Show the full content for approval
-6. After approval: Create the skill file
-7. Register the skill according to your platform
+3. **Consider hooks**: Could add a `PreToolUse` hook for `Bash` to validate binary paths before running
+4. Check: No existing skill about binary locations for this project
+5. Propose: Creating skill with validation hook
+6. Show the full content (including hooks) for approval
+7. After approval: Create the skill file
+8. Register the skill according to your platform
+
+### Example 2: Preventing Wrong Branch Commits
+
+User: "omg! Don't commit to main! Always use feature branches!"
+
+**Your response:**
+1. Load skill-creator skill
+2. Analyze: Committed directly to main branch
+3. **Identify hook opportunity**: `PreToolUse` hook for `Bash` can intercept git commits
+4. Propose skill with hook:
+
+```yaml
+---
+name: branch-protection
+description: Enforce feature branch workflow. Use when working with git commits.
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "bash -c 'if [[ \"$TOOL_INPUT\" == *\"git commit\"* ]]; then branch=$(git branch --show-current); if [[ \"$branch\" == \"main\" || \"$branch\" == \"master\" ]]; then echo \"ERROR: Direct commits to main/master not allowed. Use feature branches.\"; exit 1; fi; fi'"
+---
+
+Always create feature branches for new work. Never commit directly to main or master.
+
+When starting new work:
+1. Create branch: `git checkout -b feature/description`
+2. Make changes and commit
+3. Push and create PR
+```
+
+5. Show this for approval with explanation of how the hook works
+6. After approval: Create at `.agent/skills/branch-protection/SKILL.md`
 
 **Best practice:** Commit skills to version control for team sharing.
