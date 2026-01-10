@@ -9,6 +9,18 @@ This skill provides a structured workflow for:
 - Analyzing what went wrong and what should be preserved
 - Creating or updating skills to prevent the same mistakes
 - Handling both global and project-local skill creation
+- **Designing preventive hooks** (Claude Code only - see below)
+
+## Features by Platform
+
+| Feature | Claude Code | Goose | OpenSkills | Cursor |
+|---------|-------------|-------|------------|--------|
+| Skill creation workflow | ✅ | ✅ | ✅ | ✅ |
+| "omg!" detection | ✅ | ✅ | ✅ | ✅ |
+| Global/project skills | ✅ | ✅ | ✅ | ✅ |
+| **Preventive hooks** | **✅ Claude Code only** | ❌ | ❌ | ❌ |
+
+**Important:** This skill heavily emphasizes creating **hooks** (PreToolUse, PostToolUse, Stop) that can intercept and prevent unwanted behaviors. **Hooks are only supported in Claude Code.** If you're using Goose, OpenSkills, or Cursor, the skill will still create useful skills, but the hook examples won't function on those platforms.
 
 ## Installation
 
