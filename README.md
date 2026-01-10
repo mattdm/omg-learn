@@ -18,9 +18,27 @@ This skill provides a structured workflow for:
 | Skill creation workflow | ✅ | ✅ | ✅ | ✅ |
 | "omg!" detection | ✅ | ✅ | ✅ | ✅ |
 | Global/project skills | ✅ | ✅ | ✅ | ✅ |
-| **Preventive hooks** | **✅ Claude Code only** | ❌ | ❌ | ❌ |
+| **Skill hooks (limited)** | **✅ Claude Code only** | ❌ | ❌ | ❌ |
 
-**Important:** This skill heavily emphasizes creating **hooks** (PreToolUse, PostToolUse, Stop) that can intercept and prevent unwanted behaviors. **Hooks are only supported in Claude Code.** If you're using Goose, OpenSkills, or Cursor, the skill will still create useful skills, but the hook examples won't function on those platforms.
+## About Skill Hooks (Claude Code Only)
+
+**Important:** This skill teaches creating **skill hooks** (PreToolUse, PostToolUse, Stop) that can intercept actions during a skill's lifecycle.
+
+**Critical limitation**: Skill hooks **ONLY work when the skill is already loaded**!
+
+This means:
+- ❌ Hooks CANNOT catch the mistake that triggered "omg!" (skill isn't loaded yet)
+- ✅ Hooks CAN enforce safe behavior in **workflow skills** (explicitly invoked like `/deploy`, `/release`)
+- ❌ Hooks DON'T help for passive knowledge skills (they load too late)
+
+**When hooks are useful:**
+- Workflow skills you explicitly invoke (e.g., `/safe-commit`, `/deploy`, `/migrate`)
+- Skills that enforce process during intentional operations
+- NOT for learning from mistakes (they can't prevent the first occurrence)
+
+**Platform support:**
+- ✅ **Claude Code**: Full skill hook support
+- ❌ **Goose, OpenSkills, Cursor**: No skill hook support (skills without hooks still work fine)
 
 ## Installation
 

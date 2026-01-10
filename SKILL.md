@@ -18,17 +18,17 @@ When user says "omg!" during a correction:
 - What did you do wrong?
 - What is the correct behavior/information?
 - What knowledge should be preserved?
-- **Could a hook have prevented this?** What tool was involved?
+- **Is this a workflow skill?** (Will it be explicitly invoked like `/deploy` or `/migrate`?)
 
 **Important**: When creating the skill description, include specific trigger contexts.
 Think about WHEN the skill should activate - situations, actions, or tasks.
 Examples: "Use when building/running project", "Use when analyzing database code", "When you have deployment questions"
 
-**CRITICAL**: Think about **actionable hooks** that could catch this mistake:
-- If the mistake involved running a command: Add a `PreToolUse` hook for `Bash`
-- If the mistake was writing to wrong file: Add a `PreToolUse` hook for `Write`
-- If the mistake was editing incorrectly: Add a `PreToolUse` hook for `Edit`
-- If validation is needed after an action: Add a `PostToolUse` hook
+**Consider skill hooks ONLY for workflow skills**:
+- Workflow skills are explicitly invoked (user runs `/skill-name`)
+- Hooks enforce safe behavior during that workflow
+- Examples: `/deploy`, `/release`, `/migrate`, `/code-review`
+- **Don't use hooks for passive knowledge** - they won't catch the first mistake!
 
 ### 2. Check for Global Intent
 
@@ -97,11 +97,29 @@ hooks:
 - Description must include BOTH what the skill does AND when to use it
 - Don't put "when to use" in the body - it's only loaded AFTER triggering
 
-### Hooks: Your Safety Net for Catching Mistakes
+### Skill Hooks: Limited But Useful
 
-**IMPORTANT**: When the user says "omg!" about a mistake, consider if a **hook** could have caught it!
+**CRITICAL LIMITATION**: Skill hooks **ONLY work when the skill is already loaded**!
 
-Hooks run during the skill's lifecycle and can **intercept** actions before they happen:
+This means:
+- ❌ A hook CANNOT catch the mistake that triggered the "omg!" (the skill isn't loaded yet)
+- ✅ A hook CAN prevent mistakes during intentional workflows (when the skill is loaded on purpose)
+
+**Skill hooks are most useful for WORKFLOW skills**, not correction-based skills:
+
+**Good use cases** (skill is intentionally loaded):
+- A `/deploy` skill: Hook blocks deployment to production on wrong branch
+- A `/code-review` skill: Hook validates that review checklist steps are followed
+- A `/database-migration` skill: Hook prevents unsafe migration commands
+- A `/release` skill: Hook ensures changelog is updated before release
+
+**Poor use cases** (skill loads AFTER the mistake):
+- Learning from "omg!" moments - the hook can't catch the first occurrence
+- Corrective skills - they only load after you've already made the mistake
+
+**For omg-learn**: Only include hooks if the resulting skill is meant to be **explicitly invoked** for a workflow, not just for passive learning.
+
+Skill hooks run during the skill's lifecycle and can **intercept** actions before they happen:
 
 - **PreToolUse**: Runs BEFORE a tool is used (can block unwanted actions)
 - **PostToolUse**: Runs AFTER a tool completes (can validate results)
@@ -149,12 +167,16 @@ hooks:
 
 **When designing a skill from an "omg!" moment**:
 
-1. **Identify the mistake**: What tool was used incorrectly?
-2. **Design a hook matcher**: Which tool needs interception? (Bash, Write, Edit, etc.)
-3. **Write validation logic**: What check would have caught this?
-4. **Add to frontmatter**: Include the hook in the YAML
+1. **Decide if hooks make sense**: Is this a workflow skill that will be explicitly invoked? Or just passive knowledge?
+2. **If workflow skill**:
+   - **Identify the mistake**: What tool was used incorrectly?
+   - **Design a hook matcher**: Which tool needs interception? (Bash, Write, Edit, etc.)
+   - **Write validation logic**: What check would have caught this?
+   - **Add to frontmatter**: Include the hook in the YAML
+   - **Make it user-invocable**: User should explicitly run `/skill-name` to activate it
+3. **If passive knowledge**: Skip hooks, just document the correct behavior in the skill body
 
-Hooks are **scoped to the skill** - they only run when the skill is active and are automatically cleaned up when done.
+Skill hooks are **scoped to the skill** - they only run when the skill is active and are automatically cleaned up when done.
 
 ### Common Hook Patterns for Catching Mistakes
 
@@ -235,34 +257,50 @@ Prefer concise examples over verbose explanations.
 
 ## Example Workflows
 
-### Example 1: Binary Location Mistake
+### Example 1: Passive Knowledge Skill (No Hooks)
 
 User: "omg! This project uses a custom binary location, it's at target/x86_64-unknown-linux-musl/release/myapp"
 
 **Your response:**
 1. Load skill-creator skill
 2. Analyze: You looked in wrong location for binary
-3. **Consider hooks**: Could add a `PreToolUse` hook for `Bash` to validate binary paths before running
-4. Check: No existing skill about binary locations for this project
-5. Propose: Creating skill with validation hook
-6. Show the full content (including hooks) for approval
-7. After approval: Create the skill file
-8. Register the skill according to your platform
+3. **Is this a workflow skill?** No - this is passive knowledge that should auto-load
+4. **Skip hooks** - hooks can't catch the first mistake anyway
+5. Propose: Creating skill WITHOUT hooks (just documentation)
+6. Check: No existing skill about binary locations for this project
+7. Show the skill content for approval
+8. After approval: Create the skill file
+9. Register the skill according to your platform
 
-### Example 2: Preventing Wrong Branch Commits
+```yaml
+---
+name: project-binary-location
+description: Custom binary location for this project. Use when building or running the project binary.
+---
 
-User: "omg! Don't commit to main! Always use feature branches!"
+# Binary Location
+
+This project uses a custom target for the binary:
+- Location: `target/x86_64-unknown-linux-musl/release/myapp`
+- Use this path when running or testing the binary
+```
+
+### Example 2: Workflow Skill (WITH Hooks)
+
+User: "omg! Don't commit to main! Always use feature branches! And make sure I always run this check before committing."
 
 **Your response:**
 1. Load skill-creator skill
 2. Analyze: Committed directly to main branch
-3. **Identify hook opportunity**: `PreToolUse` hook for `Bash` can intercept git commits
-4. Propose skill with hook:
+3. **Is this a workflow skill?** Yes - user wants an explicit workflow to run before commits
+4. **Design as user-invocable workflow**: User runs `/commit` which enforces branch rules
+5. Propose skill with hook:
 
 ```yaml
 ---
-name: branch-protection
-description: Enforce feature branch workflow. Use when working with git commits.
+name: safe-commit
+description: Safe commit workflow with branch protection. Invoke explicitly with /safe-commit before making commits.
+user-invocable: true
 hooks:
   PreToolUse:
     - matcher: "Bash"
@@ -271,37 +309,40 @@ hooks:
           command: "bash -c 'if [[ \"$TOOL_INPUT\" == *\"git commit\"* ]]; then branch=$(git branch --show-current); if [[ \"$branch\" == \"main\" || \"$branch\" == \"master\" ]]; then echo \"ERROR: Direct commits to main/master not allowed. Use feature branches.\"; exit 1; fi; fi'"
 ---
 
-Always create feature branches for new work. Never commit directly to main or master.
+# Safe Commit Workflow
+
+Run this skill explicitly with `/safe-commit` before making commits.
+
+The hook will block commits to main/master branches.
 
 When starting new work:
 1. Create branch: `git checkout -b feature/description`
-2. Make changes and commit
-3. Push and create PR
+2. Make changes
+3. Run `/safe-commit` to activate protection
+4. Commit with confidence - hook prevents main/master commits
 ```
 
-5. Show this for approval with explanation of how the hook works
-6. After approval: Create at `.agent/skills/branch-protection/SKILL.md`
+5. Show this for approval with explanation: "Hook only works when you explicitly run `/safe-commit` - it can't catch passive commits"
+6. After approval: Create at `.agent/skills/safe-commit/SKILL.md`
 
-### Example 3: Preventing head with Command Output
+### Example 3: Passive Knowledge (No Hooks - They Won't Help)
 
 User: "omg! You used `npm test | head -50` and missed the actual test failures at the end! head is only useful for peeking at files, not command output where the crucial success/failure info is at the end!"
 
 **Your response:**
 1. Load skill-creator skill
 2. Analyze: Used `head` to truncate command output, cutting off critical end results
-3. **Identify hook opportunity**: `PreToolUse` hook for `Bash` can detect piping commands to `head`
-4. Propose skill with hook:
+3. **Is this a workflow skill?** No - this is general knowledge that should auto-load when running commands
+4. **Skip hooks** - they won't help because:
+   - The skill loads AFTER the mistake (when you say "omg!")
+   - Hook can't catch the first occurrence that triggered the correction
+   - This is passive knowledge, not an explicit workflow
+5. Propose skill WITHOUT hooks (just documentation):
 
 ```yaml
 ---
 name: command-output-handling
-description: Prevent truncating command output with head. Use when running commands that produce output.
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: "bash -c 'if [[ \"$TOOL_INPUT\" == *\"|\"*\"head\"* ]] && [[ \"$TOOL_INPUT\" != *\"cat \"* ]] && [[ \"$TOOL_INPUT\" != *\"<\"* ]]; then echo \"ERROR: Using head with command output loses critical success/failure info at the end. Use full output or tail instead.\"; exit 1; fi'"
+description: Best practices for command output. Use when running commands that produce output like tests, builds, or deployments.
 ---
 
 # Command Output Best Practices
@@ -321,7 +362,7 @@ Bad patterns:
 Exception: `head` is fine for reading files (`cat file.txt | head` or `head file.txt`)
 ```
 
-5. Show this for approval with explanation: "The hook detects when commands are piped to head (but allows head for file reading) and blocks execution"
+5. Show this for approval with explanation: "This is passive knowledge - no hooks needed since they can't prevent the first mistake anyway"
 6. After approval: Create at `.agent/skills/command-output-handling/SKILL.md`
 
 **Best practice:** Commit skills to version control for team sharing.
