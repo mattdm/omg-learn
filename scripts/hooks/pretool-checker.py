@@ -1,15 +1,9 @@
-#!/bin/bash
-# Optimized pretool-checker.sh - Single Python process for all operations
+#!/usr/bin/env python3
+"""
+Optimized pretool-checker.py - Claude Code PreToolUse hook
+Checks tool usage against configured patterns
+"""
 
-# Read hook input from stdin and pass via env var
-export HOOK_INPUT=$(cat)
-
-# Pattern file paths
-GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
-LOCAL_PATTERNS=".claude/omg-learn-patterns.json"
-
-# Single Python process handles everything
-python3 <<PYTHON
 import json
 import sys
 import re
@@ -17,9 +11,13 @@ import subprocess
 import os
 from pathlib import Path
 
-# Parse input from environment variable
+# Pattern file paths
+GLOBAL_PATTERNS = os.path.expanduser("~/.claude/omg-learn-patterns.json")
+LOCAL_PATTERNS = ".claude/omg-learn-patterns.json"
+
+# Parse input from stdin
 try:
-    data = json.loads(os.environ['HOOK_INPUT'])
+    data = json.loads(sys.stdin.read())
     tool_name = data.get('tool_name', '')
     tool_input_obj = data.get('tool_input', {})
     tool_input = (
@@ -40,8 +38,8 @@ def load_patterns(file_path):
     except:
         return []
 
-global_patterns = load_patterns('$GLOBAL_PATTERNS')
-local_patterns = load_patterns('$LOCAL_PATTERNS')
+global_patterns = load_patterns(GLOBAL_PATTERNS)
+local_patterns = load_patterns(LOCAL_PATTERNS)
 
 # Merge (local overrides global by ID)
 patterns_by_id = {p['id']: p for p in global_patterns if 'id' in p}
@@ -111,4 +109,3 @@ for pattern in patterns:
 
 # No patterns matched, allow
 print(json.dumps({'permission': 'allow'}))
-PYTHON

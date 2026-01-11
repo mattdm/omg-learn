@@ -17,34 +17,32 @@ When you say **"omg!"** while correcting the AI, omg-learn:
 
 ### Installation
 
-**Claude Code:**
-```bash
-# Navigate to the skill directory
-cd ~/.claude/skills/omg-learn
+**Note:** This repository contains the source code. Installation copies the hooks to your global or project-local configuration.
 
-# Install hooks and CLI
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/omg-learn.git
+cd omg-learn
+
+# Run the installer (interactive)
 ./scripts/install-hooks.sh
+
+# Choose:
+#   1) Global (all projects) - installs to ~/.claude/ or ~/.cursor/
+#   2) Project-local (current project only) - installs to .claude/ or .cursor/
+
+# The installer will:
+# - Detect your platform (Claude Code or Cursor)
+# - Copy hook scripts to the appropriate directory
+# - Register hooks in settings.json (Claude Code) or hooks.json (Cursor)
+# - Create a minimal patterns file with just the "omg!" trigger pattern
+# - For Cursor: Install the cursor rule for skill discovery
 
 # Verify installation
 omg-learn list
 ```
 
-**Cursor:**
-```bash
-# Navigate to the skill directory
-cd ~/.cursor/skills/omg-learn
-
-# Install hooks and CLI
-./scripts/install-hooks.sh
-
-# Generate and install Cursor rule
-./scripts/generate-cursor-rule SKILL.md --install
-
-# Verify installation
-omg-learn list
-```
-
-**Note:** Also supports `.agents/` or `.agent/` directories if you prefer generic naming.
+**Clean Slate:** Installation creates only a minimal patterns file. The examples in `examples/` are documentation - use them as reference, but you'll build your own patterns through the omg-learn workflow.
 
 ### First Use
 
@@ -186,10 +184,11 @@ Each pattern has:
 ### CLI Tools
 
 Pure Python implementation:
-- No external dependencies (jq removed!)
+- No external dependencies (pure Python)
 - Works on Linux/Mac
-- Fast enough (~30ms per hook execution)
-- Extensible and maintainable
+- Fast (~30ms per hook execution)
+- Clean, maintainable code with proper syntax highlighting
+- Extensible and well-tested
 
 ## Documentation
 
@@ -228,22 +227,22 @@ This is imperceptible to users since hooks only fire on user actions (not hot pa
 **Claude Code:**
 ```bash
 # Check installation
-ls ~/.claude/hooks/pretool-checker.sh
+ls ~/.claude/hooks/pretool-checker.py
 cat ~/.claude/settings.json | grep hooks
 
 # Test manually
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit"}}' | \
-  ~/.claude/hooks/pretool-checker.sh
+  ~/.claude/hooks/pretool-checker.py
 ```
 
 **Cursor:**
 ```bash
 # Check installation
-ls ~/.cursor/hooks/before-shell.sh
+ls ~/.cursor/hooks/before-shell.py
 cat ~/.cursor/hooks.json
 
 # Test manually
-echo '{"command":"git commit"}' | ~/.cursor/hooks/before-shell.sh
+echo '{"command":"git commit"}' | ~/.cursor/hooks/before-shell.py
 ```
 
 ### Pattern not matching?
@@ -258,10 +257,11 @@ omg-learn simulate "git commit -m 'fix'"
 
 ### Enable debug logging
 
-Uncomment in hook scripts:
-```bash
-# Line 36 in pretool-checker.sh:
-echo "DEBUG: Tool: $TOOL_NAME, Input: $TOOL_INPUT" >> /tmp/omg-learn-hook.log
+Add debug output to hook scripts (pretool-checker.py, etc.):
+```python
+# Add at the top after imports:
+import sys
+sys.stderr.write(f"DEBUG: Tool: {tool_name}, Input: {tool_input}\n")
 ```
 
 ## Contributing

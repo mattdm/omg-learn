@@ -96,20 +96,20 @@ mkdir -p "$HOOKS_DIR"
 # Install hook scripts based on platform
 if [[ "$PLATFORM" == "claude" ]]; then
     echo "📝 Installing Claude Code hooks..."
-    cp "$SCRIPT_DIR/hooks/pretool-checker.sh" "$HOOKS_DIR/"
-    chmod +x "$HOOKS_DIR/pretool-checker.sh"
-    cp "$SCRIPT_DIR/hooks/prompt-checker.sh" "$HOOKS_DIR/"
-    chmod +x "$HOOKS_DIR/prompt-checker.sh"
-    echo "   ✅ pretool-checker.sh"
-    echo "   ✅ prompt-checker.sh"
+    cp "$SCRIPT_DIR/hooks/pretool-checker.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/pretool-checker.py"
+    cp "$SCRIPT_DIR/hooks/prompt-checker.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/prompt-checker.py"
+    echo "   ✅ pretool-checker.py"
+    echo "   ✅ prompt-checker.py"
 elif [[ "$PLATFORM" == "cursor" ]]; then
     echo "📝 Installing Cursor hooks..."
-    cp "$SCRIPT_DIR/hooks/before-shell.sh" "$HOOKS_DIR/"
-    chmod +x "$HOOKS_DIR/before-shell.sh"
-    cp "$SCRIPT_DIR/hooks/before-prompt.sh" "$HOOKS_DIR/"
-    chmod +x "$HOOKS_DIR/before-prompt.sh"
-    echo "   ✅ before-shell.sh"
-    echo "   ✅ before-prompt.sh"
+    cp "$SCRIPT_DIR/hooks/before-shell.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/before-shell.py"
+    cp "$SCRIPT_DIR/hooks/before-prompt.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/before-prompt.py"
+    echo "   ✅ before-shell.py"
+    echo "   ✅ before-prompt.py"
 fi
 
 # Create initial patterns file if it doesn't exist
@@ -168,7 +168,7 @@ if [[ "$PLATFORM" == "claude" ]]; then
                 "hooks": [
                   {
                     "type": "command",
-                    "command": "'"$HOOKS_DIR/pretool-checker.sh"'"
+                    "command": "'"$HOOKS_DIR/pretool-checker.py"'"
                   }
                 ]
               }
@@ -178,7 +178,7 @@ if [[ "$PLATFORM" == "claude" ]]; then
                 "hooks": [
                   {
                     "type": "command",
-                    "command": "'"$HOOKS_DIR/prompt-checker.sh"'"
+                    "command": "'"$HOOKS_DIR/prompt-checker.py"'"
                   }
                 ]
               }
@@ -202,13 +202,13 @@ elif [[ "$PLATFORM" == "cursor" ]]; then
     # Determine paths: relative for project-local, absolute for global
     if [[ "$SCOPE" == "global" ]]; then
         # Global: use absolute paths
-        SHELL_HOOK_PATH="$HOOKS_DIR/before-shell.sh"
-        PROMPT_HOOK_PATH="$HOOKS_DIR/before-prompt.sh"
+        SHELL_HOOK_PATH="$HOOKS_DIR/before-shell.py"
+        PROMPT_HOOK_PATH="$HOOKS_DIR/before-prompt.py"
     else
         # Project-local: use relative paths (relative to hooks.json location)
-        # hooks.json is in .cursor/, so path is ./hooks/script.sh
-        SHELL_HOOK_PATH="./hooks/before-shell.sh"
-        PROMPT_HOOK_PATH="./hooks/before-prompt.sh"
+        # hooks.json is in .cursor/, so path is ./hooks/script.py
+        SHELL_HOOK_PATH="./hooks/before-shell.py"
+        PROMPT_HOOK_PATH="./hooks/before-prompt.py"
     fi
 
     # Create hooks file if it doesn't exist

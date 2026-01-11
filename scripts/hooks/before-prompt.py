@@ -1,27 +1,26 @@
-#!/bin/bash
-# Optimized prompt-checker.sh - Single Python process for all operations
+#!/usr/bin/env python3
+"""
+before-prompt.py - omg-learn Cursor Hook (beforeSubmitPrompt)
+Checks user prompts against configured patterns
+"""
 
-# Read hook input from stdin and pass via env var
-export HOOK_INPUT=$(cat)
-
-# Pattern file paths
-GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
-LOCAL_PATTERNS=".claude/omg-learn-patterns.json"
-
-# Single Python process handles everything
-python3 <<PYTHON
 import json
 import sys
 import re
 import os
 from pathlib import Path
 
-# Parse input from environment variable
+# Pattern file paths for Cursor
+GLOBAL_PATTERNS = os.path.expanduser("~/.cursor/omg-learn-patterns.json")
+LOCAL_PATTERNS = ".cursor/omg-learn-patterns.json"
+
+# Parse input from stdin
 try:
-    data = json.loads(os.environ['HOOK_INPUT'])
+    data = json.loads(sys.stdin.read())
+    # Cursor sends: {"prompt": "user message..."}
     prompt = data.get('prompt', '')
 except:
-    print(json.dumps({'permission': 'allow'}))
+    print(json.dumps({'allowed': True}))
     sys.exit(0)
 
 # Load and merge patterns
@@ -32,8 +31,8 @@ def load_patterns(file_path):
     except:
         return []
 
-global_patterns = load_patterns('$GLOBAL_PATTERNS')
-local_patterns = load_patterns('$LOCAL_PATTERNS')
+global_patterns = load_patterns(GLOBAL_PATTERNS)
+local_patterns = load_patterns(LOCAL_PATTERNS)
 
 # Merge (local overrides global by ID)
 patterns_by_id = {p['id']: p for p in global_patterns if 'id' in p}
@@ -46,8 +45,10 @@ for pattern in patterns:
     if not pattern.get('enabled', True):
         continue
 
-    # Skip if not UserPromptSubmit
-    if pattern.get('hook') != 'UserPromptSubmit':
+    # Check if this pattern applies to UserPromptSubmit or beforeSubmitPrompt
+    # Accept both for compatibility
+    hook_type = pattern.get('hook', '')
+    if hook_type not in ('UserPromptSubmit', 'beforeSubmitPrompt'):
         continue
 
     # Check regex pattern (case-insensitive for prompts)
@@ -59,13 +60,11 @@ for pattern in patterns:
             message = pattern.get('message', 'Pattern matched')
 
             if action == 'block':
-                print(json.dumps({'permission': 'deny', 'user_message': message}))
-            elif action == 'ask':
-                print(json.dumps({'permission': 'ask', 'user_message': message}))
+                print(json.dumps({'allowed': False, 'message': message}))
             else:
-                print(json.dumps({'permission': 'allow', 'agent_message': message}))
+                # Cursor doesn't support 'ask' well for prompts, treat as warning
+                print(json.dumps({'allowed': True, 'message': message}))
             sys.exit(0)
 
 # No patterns matched, allow
-print(json.dumps({'permission': 'allow'}))
-PYTHON
+print(json.dumps({'allowed': True}))
