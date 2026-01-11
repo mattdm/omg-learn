@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "patterns": [
+    {
+      "id": "omg-detection-example",
+      "description": "Example pattern: Detects 'omg!' in user prompts as a teaching example",
+      "hook": "UserPromptSubmit",
+      "pattern": "(?i)omg!",
+      "action": "warn",
+      "message": "💡 Detected 'omg!' - This is an example pattern. You can add more patterns through omg-learn.",
+      "enabled": true,
+      "note": "This is just an example to demonstrate the pattern system. Delete or disable if not needed."
+    },
+    {
+      "id": "no-head-with-commands",
+      "description": "Prevent piping command output to head (loses critical end output)",
+      "hook": "PreToolUse",
+      "matcher": "Bash",
+      "pattern": "\\|.*\\bhead\\b",
+      "exclude_pattern": "(cat |<|\\bhead\\s+[^|])",
+      "action": "block",
+      "message": "ERROR: Using head with command output loses critical success/failure info at the end. Use full output or tail instead.",
+      "skill_reference": "command-output-handling",
+      "enabled": false
+    },
+    {
+      "id": "no-commit-to-main",
+      "description": "Prevent direct commits to main/master branches",
+      "hook": "PreToolUse",
+      "matcher": "Bash",
+      "pattern": "git\\s+commit",
+      "check_script": "./scripts/patterns/check-branch.sh",
+      "action": "block",
+      "message": "ERROR: Direct commits to main/master not allowed. Use feature branches.",
+      "skill_reference": "branch-protection",
+      "enabled": false
+    },
+    {
+      "id": "warn-on-force-push",
+      "description": "Warn when attempting force push",
+      "hook": "PreToolUse",
+      "matcher": "Bash",
+      "pattern": "git\\s+push.*(-f|--force)",
+      "action": "ask",
+      "message": "⚠️ You're about to force push. This can overwrite remote history. Are you sure?",
+      "enabled": false
+    },
+    {
+      "id": "no-secrets-in-commits",
+      "description": "Check for potential secrets before git add",
+      "hook": "PreToolUse",
+      "matcher": "Bash",
+      "pattern": "git\\s+add",
+      "check_script": "./scripts/patterns/check-secrets.sh",
+      "action": "block",
+      "message": "ERROR: Potential secrets detected in files to be committed. Please review.",
+      "enabled": false
+    }
+  ]
+}

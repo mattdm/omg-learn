@@ -13,6 +13,26 @@ When the user says "omg!" (case-insensitive) while correcting you, create or upd
 
 When user says "omg!" during a correction:
 
+### 0. Check Platform Hooks Installation (NEW - First Time Only)
+
+**Before creating skills, check if platform hooks are installed:**
+
+1. **Detect if hooks are installed**:
+   - Claude Code: Check if `~/.claude/hooks/pretool-checker.sh` or `.claude/hooks/pretool-checker.sh` exists
+   - Cursor: Check if `~/.cursor/hooks.json` or `.cursor/hooks.json` exists
+
+2. **If hooks NOT installed**:
+   - Explain what platform hooks do (catch mistakes BEFORE they happen, unlike skill hooks)
+   - Ask user if they want to install them
+   - If yes: Run `./scripts/install-hooks.sh` or guide them through manual installation
+   - Platform hooks are OPTIONAL - omg-learn works fine without them
+
+3. **If hooks already installed**: Continue to step 1
+
+**Platform Hooks vs Skill Hooks:**
+- **Platform hooks**: Always active, catch mistakes BEFORE they happen (this is what we install here)
+- **Skill hooks**: Only active when skill is loaded, can't catch first mistake (documented but limited use)
+
 ### 1. Analyze the Correction
 
 - What did you do wrong?
@@ -55,9 +75,70 @@ Search the appropriate location for related skills:
 
 Create or update the skill file at the specified location.
 
-### 6. Register the Skill
+### 6. Ask: Should this have a preventive pattern? (NEW - If Hooks Installed)
+
+**If platform hooks are installed, offer to create a pattern:**
+
+"This mistake could be caught with a pattern before it happens. Would you like to add a preventive pattern?"
+
+- If **YES**: Continue to step 7
+- If **NO**: Skip to step 8
+
+**When patterns make sense:**
+- Mistakes involving specific commands (e.g., `head` with pipes, `git commit` on wrong branch)
+- Mistakes with specific file operations (writing to wrong paths)
+- Detectable patterns in user prompts
+- NOT for mistakes requiring complex reasoning
+
+### 7. Create Pattern (NEW - If User Wants Pattern)
+
+Guide user through pattern creation:
+
+1. **Determine hook type**:
+   - `PreToolUse` - Before tools like Bash, Write, Edit
+   - `UserPromptSubmit` - Before Claude processes user prompts
+
+2. **Determine matcher** (for PreToolUse only):
+   - `Bash` - Shell commands
+   - `Write` - File writes
+   - `Edit` - File edits
+   - `*` - All tools
+
+3. **Create pattern regex**:
+   - Ask what pattern identifies the mistake
+   - Consider exclude patterns if needed
+   - Test the pattern logic
+
+4. **Choose action**:
+   - `block` - Deny the action (recommended for dangerous operations)
+   - `warn` - Allow but show warning
+   - `ask` - Prompt user for confirmation
+
+5. **Choose scope**:
+   - Global: Add to `~/.claude/omg-learn-patterns.json`
+   - Project-local: Add to `.claude/omg-learn-patterns.json`
+
+6. **Add pattern to config file**:
+   ```json
+   {
+     "id": "pattern-name",
+     "description": "What this pattern prevents",
+     "hook": "PreToolUse",
+     "matcher": "Bash",
+     "pattern": "regex pattern here",
+     "exclude_pattern": "optional exclude regex",
+     "action": "block",
+     "message": "ERROR message to show",
+     "skill_reference": "related-skill-name",
+     "enabled": true
+   }
+   ```
+
+### 8. Register the Skill
 
 The skill will be registered according to your platform's skill discovery mechanism.
+
+**If pattern was created**: It's immediately active - future attempts will be caught!
 
 ## Essential Skill Structure (Embedded from skill-creator)
 
