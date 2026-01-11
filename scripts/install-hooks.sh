@@ -97,14 +97,14 @@ if [[ ! -f "$PATTERNS_FILE" ]]; then
   "version": "1.0",
   "patterns": [
     {
-      "id": "omg-detection-example",
-      "description": "Example pattern: Detects 'omg!' in user prompts as a teaching example",
+      "id": "omg-learn-trigger",
+      "description": "Detects 'omg!' to trigger the mistake-learning workflow",
       "hook": "UserPromptSubmit",
       "pattern": "[Oo][Mm][Gg]!",
       "action": "warn",
-      "message": "💡 Detected 'omg!' - This is an example pattern. You can add more patterns through omg-learn.",
+      "message": "🤦 User caught a mistake! Follow the omg-learn workflow:\n1. Acknowledge the mistake\n2. Ask: What tool did I misuse? (Bash/Write/Edit/Prompt)\n3. Ask: What was the problematic input/behavior?\n4. Design pattern: hook, matcher, regex, action, message\n5. Test with omg-learn test\n6. Save the pattern",
       "enabled": true,
-      "note": "This is just an example to demonstrate the pattern system. Delete or disable if not needed."
+      "note": "Triggers the learning workflow when user says 'omg!' to catch mistakes"
     }
   ]
 }
