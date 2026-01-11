@@ -221,6 +221,46 @@ omg-learn enable pizza-party-excitement --global
 - Can't detect from prompt (e.g., checking git branch requires execution context)
 - Need hard stop for dangerous operations (commit secrets, delete critical files)
 
+### 10. Skill-Linked Pattern (🌟 RECOMMENDED!)
+
+The BEST use of context injection is linking to skills! Create a companion pattern for every skill.
+
+**Example: Remind Claude to use database-migrations skill**
+
+```json
+{
+  "id": "remind-database-migrations-skill",
+  "description": "Reminds Claude to use database-migrations skill",
+  "hook": "UserPromptSubmit",
+  "pattern": "(database|migration|schema|alter\\s+table)",
+  "action": "warn",
+  "message": "💡 Consider using the database-migrations skill. It covers: reversible migrations, up/down functions, database safety guidelines.\n\nSkill: ~/.claude/skills/database-migrations.md",
+  "skill_reference": "database-migrations",
+  "enabled": true,
+  "note": "Companion pattern for database-migrations skill"
+}
+```
+
+**How it works:**
+1. User says: "I need to add a column to the users table"
+2. Pattern matches "database" + "table"
+3. Context injected into Claude's prompt (Claude Code) or warning shown (Cursor)
+4. Claude sees reminder and uses the database-migrations skill
+5. Claude applies best practices: reversible migration, up/down functions!
+
+**This is better than prevention patterns because:**
+- **Proactive** (guides before mistake) not reactive (blocks after)
+- **Educational** (teaches about available skills)
+- **Non-disruptive** (no permission dialogs)
+- **Discoverable** (users learn about skills organically)
+
+**When creating skills, always create a companion pattern!**
+
+Other skill-pattern examples:
+- `branch-protection` skill → triggers on: branch, main, master, git checkout
+- `production-deployment` skill → triggers on: production, deploy, release
+- `authentication-patterns` skill → triggers on: auth, login, oauth, jwt
+
 ## Usage Examples
 
 ### Enable a Pattern

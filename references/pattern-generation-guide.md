@@ -283,6 +283,55 @@ print(json.dumps({'allowed': True, 'message': message}))
 
 **Note:** For actual secret detection (committing .env, API keys), use PreToolUse with `block` action and check scripts - context injection isn't enough!
 
+### Skill-Linked Context Injection Patterns
+
+The BEST use of context injection is linking to skills! When you create a skill, also create a companion pattern.
+
+**How it works:**
+1. User mentions relevant keywords
+2. Pattern triggers and injects context
+3. Claude sees: "💡 Use the [skill-name] skill for this!"
+4. Claude loads and applies the skill
+
+**Example workflow:**
+- User creates "database-migrations" skill
+- Pattern triggers on: "database", "migration", "schema"
+- When user says "I need to update the database schema"
+- Pattern injects: "💡 Consider using the database-migrations skill. It covers: reversible migrations, up/down functions."
+- Claude automatically applies migration best practices!
+
+**Pattern structure for skill linking:**
+```json
+{
+  "id": "remind-[skill-name]-skill",
+  "description": "Reminds Claude to use [skill-name] skill",
+  "hook": "UserPromptSubmit",
+  "pattern": "(keyword1|keyword2|keyword3\\s+phrase)",
+  "action": "warn",
+  "message": "💡 Consider using the [skill-name] skill. It covers: [brief summary]\n\nSkill: ~/.claude/skills/[skill-name].md",
+  "skill_reference": "[skill-name]",
+  "enabled": true,
+  "note": "Auto-generated companion pattern for skill"
+}
+```
+
+**Benefits over prevention patterns:**
+- Proactive (guides before mistake) vs Reactive (blocks after)
+- Educational (teaches Claude about available skills)
+- Non-disruptive (no permission dialogs)
+- Discoverable (users learn about skills organically)
+
+**When to use skill-linked patterns:**
+- Every time you create a skill with clear trigger contexts
+- Skills about specific domains (database, authentication, deployment, etc.)
+- Skills with technical vocabulary that appears in user prompts
+- Skills about best practices or conventions
+
+**When NOT to use:**
+- Pure reference skills with no clear triggers
+- Skills that are always active (no specific context)
+- Skills without user-facing keywords
+
 ### When to Use Context Injection vs Prevention
 
 **🌟 Prefer context injection (UserPromptSubmit) when:**

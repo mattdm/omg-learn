@@ -85,6 +85,16 @@ Next time: Hook blocks the command before execution!
 - Deployment checklists when "production" mentioned
 - Fun surprises like pizza parties!
 
+**🌟 Best Practice: Link Patterns to Skills**
+
+When you create a skill, also create a companion context injection pattern:
+- Pattern triggers on relevant keywords from the skill description
+- Reminds Claude to use the skill when appropriate
+- Proactive guidance instead of reactive blocking
+- Makes skills discoverable as you work
+
+**Example:** Create a "database-migrations" skill → add pattern that triggers on "database", "migration", "schema" → Claude automatically uses the skill when you mention database changes!
+
 **Important:** Context injection is for GUIDANCE and EDUCATION. For dangerous operations (committing secrets, deleting files), you still need prevention patterns with `block` action!
 
 **How it works:**

@@ -79,21 +79,67 @@ If not found → Propose new skill
 
 After user approval, create/update the skill file.
 
-### 6. AI-Powered Pattern Generation (If Hooks Installed)
+### 6. Generate Companion Context Injection Pattern (DEFAULT)
 
-**If platform hooks are installed, ask:**
+**Automatically propose a context injection pattern to remind Claude when to use this skill:**
 
-"This mistake could be prevented with a pattern. Should I generate one?"
+**Step 6.1: Extract trigger keywords from skill description**
 
-- If **YES** → Continue to step 7
-- If **NO** → Done
+Look for:
+- "Use when...", "When..." clauses in the skill description
+- Technical terms and domain vocabulary (database, git, production, migration, etc.)
+- User-provided trigger contexts
 
-**When patterns make sense:**
-- **Prevention:** Mistakes with specific commands or files, detectable patterns (regex or script)
-- **Context injection:** Reminders about conventions, instructions based on keywords, educational hints
-- NOT for complex reasoning mistakes that require understanding
+**Example:**
+- Skill description: "Use when working with database schema changes, migrations, alters"
+- Extracted keywords: database, migration, schema, alter
 
-**Pattern types (prefer top to bottom):**
+**Step 6.2: Show proposed pattern**
+
+Present the pattern structure:
+```json
+{
+  "id": "remind-[skill-name]-skill",
+  "description": "Reminds Claude to use [skill-name] skill",
+  "hook": "UserPromptSubmit",
+  "pattern": "(keyword1|keyword2|keyword3)",
+  "action": "warn",
+  "message": "💡 Consider using the [skill-name] skill. It covers: [summary]",
+  "skill_reference": "[skill-name]",
+  "enabled": true,
+  "note": "Companion pattern for skill"
+}
+```
+
+**Step 6.3: Ask for confirmation**
+
+Show: "Extracted keywords: database, migration, schema"
+
+Ask: "Create pattern with these keywords? (or customize/skip)"
+
+Options:
+- **Yes** → Continue to Step 6.4
+- **Customize** → Let user edit keywords list, then continue to Step 6.4
+- **Skip** → Don't create pattern (user can add manually later)
+
+**Step 6.4: Create and add pattern**
+
+Generate the pattern JSON using the template from `references/skill-pattern-template.md`
+
+Add to patterns file with `skill_reference` linking back to skill
+
+**Why this is the magic sauce:**
+- **Proactive:** Claude is reminded BEFORE attempting the task
+- **Non-disruptive:** Just adds helpful context to Claude's prompt
+- **Discoverable:** Users learn about skills as they work
+- **Educational:** Claude sees guidance and learns when to apply skills
+
+**Skip pattern creation only if:**
+- No hooks installed (warn user about missing capability)
+- Skill has no clear trigger context (pure reference material)
+- User explicitly says "no pattern needed"
+
+**Pattern types (for reference - prefer top to bottom):**
 1. **Context injection patterns (🌟 MAGIC SAUCE):** Add guidance to Claude's prompt based on keywords - proactive, non-disruptive (Claude Code: true context, Cursor: warning)
 2. **Preventive patterns:** Block or warn before dangerous operations - reactive, more disruptive
 3. **Ask patterns (LAST RESORT):** Confirmation dialogs - most disruptive, use sparingly
