@@ -1,12 +1,8 @@
 #!/bin/bash
 # Optimized pretool-checker.sh - Single Python process for all operations
 
-# Determine script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
-
-# Read hook input from stdin
-INPUT=$(cat)
+# Read hook input from stdin and pass via env var
+export HOOK_INPUT=$(cat)
 
 # Pattern file paths
 GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
@@ -18,11 +14,12 @@ import json
 import sys
 import re
 import subprocess
+import os
 from pathlib import Path
 
-# Parse input
+# Parse input from environment variable
 try:
-    data = json.loads('''$INPUT''')
+    data = json.loads(os.environ['HOOK_INPUT'])
     tool_name = data.get('tool_name', '')
     tool_input_obj = data.get('tool_input', {})
     tool_input = (

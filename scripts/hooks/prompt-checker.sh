@@ -1,8 +1,8 @@
 #!/bin/bash
 # Optimized prompt-checker.sh - Single Python process for all operations
 
-# Read hook input from stdin
-INPUT=$(cat)
+# Read hook input from stdin and pass via env var
+export HOOK_INPUT=$(cat)
 
 # Pattern file paths
 GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
@@ -13,11 +13,12 @@ python3 <<PYTHON
 import json
 import sys
 import re
+import os
 from pathlib import Path
 
-# Parse input
+# Parse input from environment variable
 try:
-    data = json.loads('''$INPUT''')
+    data = json.loads(os.environ['HOOK_INPUT'])
     prompt = data.get('prompt', '')
 except:
     print(json.dumps({'permission': 'allow'}))
