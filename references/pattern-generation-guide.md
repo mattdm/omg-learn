@@ -273,13 +273,15 @@ print(json.dumps({'allowed': True, 'message': message}))
    }
    ```
 
-4. **Sensitive File Handling:**
+4. **Code Style Reminders:**
    ```json
    {
-     "pattern": "\\.env",
-     "message": "🔒 .env files contain secrets. Never commit, never read in responses, always use environment variables in code."
+     "pattern": "\\bfunction\\s+\\w+",
+     "message": "💡 This project uses arrow functions. Style guide: const myFunc = () => {...}"
    }
    ```
+
+**Note:** For actual secret detection (committing .env, API keys), use PreToolUse with `block` action and check scripts - context injection isn't enough!
 
 ### When to Use Context Injection vs Prevention
 
@@ -290,17 +292,19 @@ print(json.dumps({'allowed': True, 'message': message}))
 - You want deterministic instructions based on what the user is asking about
 - **This is the magic sauce!** Proactive > Reactive
 
-**Examples where context injection works better than ask:**
-- User mentions "force push" → Inject reminder about branch safety
-- User mentions "production" → Inject deployment checklist
-- User mentions ".env" → Inject reminder about secrets
-- User mentions "database migration" → Inject reversibility requirements
+**Examples where context injection works well:**
+- User mentions "force push" → Inject reminder about branch safety, when to use it
+- User mentions "production deployment" → Inject deployment checklist and best practices
+- User mentions "database migration" → Inject reversibility requirements (up/down functions)
+- User mentions "refactor" → Inject project's refactoring guidelines
+- User mentions "authentication" → Inject project's auth patterns (JWT, OAuth, etc.)
 
 **Use prevention patterns (block) when:**
-- The action will definitely cause damage (commit secrets, delete critical files)
-- You need a hard stop before execution
+- The action will definitely cause damage (commit secrets, delete critical files, drop database)
+- You need a hard stop before execution - no second chances
 - The consequence is severe and irreversible
-- Context injection can't catch it (e.g., checking git branch requires execution context)
+- Context injection can't catch it (e.g., checking git branch requires execution context, not just prompt keywords)
+- **Critical example:** Committing secrets - you MUST block this, not just warn!
 
 **Use ask only when:**
 - Block is too strict (legitimate uses exist)

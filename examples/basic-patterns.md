@@ -199,11 +199,16 @@ omg-learn enable pizza-party-excitement --global
 # Then say "pizza party" in your prompt!
 ```
 
-**Why context injection is better than ask:**
+**Why context injection is better than ask (for guidance):**
 - **Proactive vs Reactive:** Guides decisions upfront instead of blocking after
 - **Non-disruptive:** No permission dialogs
 - **Educational:** Claude learns what to do/avoid
-- **Examples:** "force push" → safety reminder, "production" → deployment checklist, ".env" → secrets warning
+- **Examples:** "force push" → safety reminder, "production" → deployment checklist, "refactor" → project guidelines
+
+**When you still need block (not context injection):**
+- Committing secrets (.env, API keys) - MUST block, too dangerous
+- Deleting critical files - need hard stop
+- Operations that check execution context (git branch, environment) - can't detect from prompt alone
 
 **Other context injection ideas:**
 - Project-specific coding conventions

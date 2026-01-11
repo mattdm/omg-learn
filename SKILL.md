@@ -148,11 +148,14 @@ Example: Branch checking, environment validation
    - Claude Code: True context injection into Claude's prompt
    - Cursor: Warning message to user (not AI context, but still useful)
    - **When to use:** Detect situations from user's prompt keywords
+   - **Best for:** Guidance, education, reminders, conventions
+   - **Not for:** Dangerous operations that need hard stops (use block instead)
 
 2. **block (PreToolUse)** - For dangerous operations that need hard stops
    - Reactive: Stops action after Claude decided to do it
-   - Use when action will definitely cause damage
+   - Use when action will definitely cause damage (commit secrets, delete files, drop database)
    - Recommended for prevention that can't be caught via context injection
+   - **Critical:** Some things MUST be blocked (secrets, destructive operations)
 
 3. **warn (PreToolUse)** - For educational messages about operations
    - Allow action but show warning

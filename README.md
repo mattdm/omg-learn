@@ -80,10 +80,12 @@ Next time: Hook blocks the command before execution!
 - Claude sees guidance and makes better decisions upfront
 
 **Example use cases:**
-- Remind Claude about project conventions
-- Warn about sensitive operations before Claude attempts them
-- Educational hints when using certain tools
+- Remind Claude about project conventions (coding style, architecture patterns)
+- Educational hints when specific topics mentioned (force push → when to use it)
+- Deployment checklists when "production" mentioned
 - Fun surprises like pizza parties!
+
+**Important:** Context injection is for GUIDANCE and EDUCATION. For dangerous operations (committing secrets, deleting files), you still need prevention patterns with `block` action!
 
 **How it works:**
 - **Claude Code**: Context added directly to Claude's prompt (true magic!)
