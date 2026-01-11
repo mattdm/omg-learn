@@ -13,7 +13,7 @@ GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
 LOCAL_PATTERNS=".claude/omg-learn-patterns.json"
 
 # Merge patterns (project-local overrides global for same ID)
-MERGED_PATTERNS='{"patterns":[]}'
+MERGED_PATTERNS='[]'
 
 if [[ -f "$GLOBAL_PATTERNS" ]]; then
     MERGED_PATTERNS=$(jq '.patterns' "$GLOBAL_PATTERNS" 2>/dev/null || echo '[]')
@@ -22,10 +22,9 @@ fi
 if [[ -f "$LOCAL_PATTERNS" ]]; then
     LOCAL=$(jq '.patterns' "$LOCAL_PATTERNS" 2>/dev/null || echo '[]')
     # Merge: add local patterns, they override global by ID
-    MERGED_PATTERNS=$(jq --argjson local "$LOCAL" '
-        . as $global |
+    MERGED_PATTERNS=$(jq --argjson local "$LOCAL" --argjson global "$MERGED_PATTERNS" '
         $local + ($global | map(select(.id as $id | $local | map(.id) | index($id) | not)))
-    ' <<< "$MERGED_PATTERNS")
+    ' <<< 'null')
 fi
 
 # Check each pattern
@@ -55,22 +54,22 @@ while IFS= read -r pattern; do
             # Pattern matched! Take action
             case "$ACTION" in
                 block)
-                    echo "{\"permission\": \"deny\", \"user_message\": \"$MESSAGE\"}"
+                    jq -n --arg msg "$MESSAGE" '{"permission": "deny", "user_message": $msg}'
                     exit 0
                     ;;
                 ask)
-                    echo "{\"permission\": \"ask\", \"user_message\": \"$MESSAGE\"}"
+                    jq -n --arg msg "$MESSAGE" '{"permission": "ask", "user_message": $msg}'
                     exit 0
                     ;;
                 warn)
                     # For UserPromptSubmit, inject message into agent context
-                    echo "{\"permission\": \"allow\", \"agent_message\": \"$MESSAGE\"}"
+                    jq -n --arg msg "$MESSAGE" '{"permission": "allow", "agent_message": $msg}'
                     exit 0
                     ;;
             esac
         fi
     fi
-done < <(echo "$MERGED_PATTERNS" | jq -c '.[]' 2>/dev/null || echo '[]')
+done < <(echo "$MERGED_PATTERNS" | jq -c '.[]' || true) 2>/dev/null
 
 # No patterns matched, allow
 echo '{"permission": "allow"}'

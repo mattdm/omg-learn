@@ -97,7 +97,7 @@ if [[ ! -f "$PATTERNS_FILE" ]]; then
       "id": "omg-detection-example",
       "description": "Example pattern: Detects 'omg!' in user prompts as a teaching example",
       "hook": "UserPromptSubmit",
-      "pattern": "(?i)omg!",
+      "pattern": "[Oo][Mm][Gg]!",
       "action": "warn",
       "message": "💡 Detected 'omg!' - This is an example pattern. You can add more patterns through omg-learn.",
       "enabled": true,
