@@ -38,10 +38,16 @@ PATTERNS=$(echo "$MERGED_PATTERNS" | python3 -c "import json, sys; print(json.du
 json_response() {
     local allowed="$1"
     local message="$2"
+    
+    # Convert bash true/false to Python True/False
+    local py_allowed="True"
+    if [[ "$allowed" == "false" ]]; then
+        py_allowed="False"
+    fi
 
     python3 -c "
 import json
-response = {'allowed': $allowed}
+response = {'allowed': $py_allowed}
 if '$message':
     response['message'] = '''$message'''
 print(json.dumps(response))
