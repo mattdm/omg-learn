@@ -93,9 +93,10 @@ After user approval, create/update the skill file.
 - **Context injection:** Reminders about conventions, instructions based on keywords, educational hints
 - NOT for complex reasoning mistakes that require understanding
 
-**Pattern types:**
-- **Preventive patterns:** Block, warn, or ask before dangerous operations
-- **Context injection patterns:** Add helpful context to Claude's prompt based on keywords (Claude Code only)
+**Pattern types (prefer top to bottom):**
+1. **Context injection patterns (🌟 MAGIC SAUCE):** Add guidance to Claude's prompt based on keywords - proactive, non-disruptive (Claude Code: true context, Cursor: warning)
+2. **Preventive patterns:** Block or warn before dangerous operations - reactive, more disruptive
+3. **Ask patterns (LAST RESORT):** Confirmation dialogs - most disruptive, use sparingly
 
 ### 7. Generate and Test Pattern
 
@@ -139,21 +140,30 @@ For complex logic that can't be regex.
 
 Example: Branch checking, environment validation
 
-**Action:**
-- `block` → Prevent action entirely (PreToolUse only) - **Recommended** for most cases
-- `warn` → Allow with warning (PreToolUse), or inject context (UserPromptSubmit)
-- `ask` → Request confirmation (PreToolUse), or inject context (UserPromptSubmit)
-  - ⚠️ **CURSOR WARNING:** "ask" is VERY disruptive in Cursor! Prefer "block" with smarter patterns
+**Action (hierarchy - best to worst):**
 
-**Note on UserPromptSubmit:**
-- `warn`/`ask` actions inject the message as context into Claude's prompt (Claude Code only!)
-- `block` action shows error to user and prevents prompt submission
-- For Cursor, messages appear as warnings to user, not injected context
+1. **Context injection (UserPromptSubmit with warn/ask)** - 🌟 **MAGIC SAUCE - USE THIS FIRST!**
+   - Proactive: Guides Claude's decisions BEFORE they happen
+   - Non-disruptive: No permission dialogs
+   - Claude Code: True context injection into Claude's prompt
+   - Cursor: Warning message to user (not AI context, but still useful)
+   - **When to use:** Detect situations from user's prompt keywords
 
-**Platform differences for "ask":**
-- **Claude Code**: User-friendly confirmation, acceptable to use
-- **Cursor**: Very disruptive workflow interruption - AVOID except for exceptional cases
-- **Recommendation**: Use "block" with clear messages instead of "ask" for Cursor compatibility
+2. **block (PreToolUse)** - For dangerous operations that need hard stops
+   - Reactive: Stops action after Claude decided to do it
+   - Use when action will definitely cause damage
+   - Recommended for prevention that can't be caught via context injection
+
+3. **warn (PreToolUse)** - For educational messages about operations
+   - Allow action but show warning
+   - Less disruptive than ask
+
+4. **ask (PreToolUse)** - ⚠️ **LAST RESORT - MOST DISRUPTIVE**
+   - Cursor: VERY disruptive - AVOID
+   - Claude Code: Less disruptive but still prefer context injection
+   - Only use when block is too strict AND context injection can't detect it
+
+**Key insight:** Context injection is proactive (guides before decision), ask is reactive (blocks after bad decision). Proactive wins!
 
 **Message:**
 Clear explanation with suggested fix.

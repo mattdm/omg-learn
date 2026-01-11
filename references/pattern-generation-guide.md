@@ -283,18 +283,32 @@ print(json.dumps({'allowed': True, 'message': message}))
 
 ### When to Use Context Injection vs Prevention
 
-**Use prevention patterns (block/ask) when:**
-- The action will cause damage (commit secrets, delete files)
-- You need to stop the operation before it executes
-- The consequence is severe
+**🌟 Prefer context injection (UserPromptSubmit) when:**
+- You can detect the situation from the user's prompt (keywords, patterns)
+- You want to guide Claude's decisions upfront, not react to them
+- The goal is education and guidance
+- You want deterministic instructions based on what the user is asking about
+- **This is the magic sauce!** Proactive > Reactive
 
-**Use context injection (warn) when:**
-- You want to remind Claude about something
-- You need to provide additional context
-- The goal is education, not blocking
-- You want deterministic instructions based on keywords
+**Examples where context injection works better than ask:**
+- User mentions "force push" → Inject reminder about branch safety
+- User mentions "production" → Inject deployment checklist
+- User mentions ".env" → Inject reminder about secrets
+- User mentions "database migration" → Inject reversibility requirements
 
-**Key difference:** Prevention stops execution, context injection adds information.
+**Use prevention patterns (block) when:**
+- The action will definitely cause damage (commit secrets, delete critical files)
+- You need a hard stop before execution
+- The consequence is severe and irreversible
+- Context injection can't catch it (e.g., checking git branch requires execution context)
+
+**Use ask only when:**
+- Block is too strict (legitimate uses exist)
+- Context injection can't detect the situation from the prompt
+- You truly need user confirmation
+- **Remember:** Ask is the most disruptive option - use as last resort
+
+**Key difference:** Context injection is proactive (guides decisions before they're made), prevention is reactive (stops after decision is made). Proactive is almost always better!
 
 ## Pattern Generation Workflow
 
@@ -352,27 +366,38 @@ But blocks:
 
 ### Step 5: Choose Action
 
-**block:**
-- Use when the action will definitely cause problems
-- Examples: commit to main, force push to main, commit secrets
-- Message should explain why and suggest alternative
-- **Recommended** for most prevention patterns
+**The hierarchy (best to worst):**
 
-**warn:**
-- Use when action might be problematic but has legitimate uses
-- Examples: large file commits, modifying generated files
-- Message should educate about potential issues
-- Also used for context injection in UserPromptSubmit hooks
+1. **Context injection (UserPromptSubmit)** - 🌟 THE MAGIC SAUCE
+   - **Proactive:** Guides Claude's decisions BEFORE they happen
+   - **Non-disruptive:** No permission dialogs, just adds instructions to Claude's prompt
+   - **Educational:** Claude sees the guidance and learns what to do/avoid
+   - **Examples:** Remind about conventions, warn about sensitive operations, educational hints
+   - **When to use:** Whenever you can detect the situation from the user's prompt
+   - **Both platforms:** Works in Claude Code (true context), Cursor (warning to user)
 
-**ask:**
-- Use when action requires careful consideration and confirmation
-- Examples: force push, deleting branches, modifying important files
-- Message should list criteria for proceeding
-- **⚠️ CURSOR WARNING:** "ask" actions are VERY disruptive in Cursor's workflow!
-  - Prefer "block" with smarter patterns and clear error messages
-  - Only use "ask" for truly exceptional cases
-  - In most cases where you'd use "ask", use "block" instead and let users disable the pattern if needed
-- **Claude Code:** "ask" is less disruptive, more acceptable to use
+2. **Block (PreToolUse)** - For dangerous operations
+   - **Reactive:** Prevents action after Claude already decided to do it
+   - Use when the action will definitely cause problems
+   - Examples: commit to main, force push to main, commit secrets
+   - Message should explain why and suggest alternative
+   - **Recommended** for prevention patterns that can't be caught by context injection
+
+3. **Warn (PreToolUse)** - For educational messages
+   - Use when action might be problematic but has legitimate uses
+   - Examples: large file commits, modifying generated files
+   - Message should educate about potential issues
+   - Less disruptive than "ask"
+
+4. **Ask (PreToolUse)** - LAST RESORT
+   - Use when action requires careful consideration and confirmation
+   - **Most disruptive option** - interrupts workflow with permission dialog
+   - Examples: force push, deleting branches (but context injection is often better!)
+   - ⚠️ **CURSOR:** VERY disruptive - avoid except for exceptional cases
+   - ⚠️ **CLAUDE CODE:** Less disruptive but still prefer context injection when possible
+   - **Better alternative:** Use context injection to guide Claude away from the action upfront
+
+**Key insight:** Context injection is proactive (guides decisions), ask is reactive (blocks after bad decision). Proactive is almost always better!
 
 ### Step 6: Write Clear Message
 

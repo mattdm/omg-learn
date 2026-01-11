@@ -70,31 +70,34 @@ Next time: Hook blocks the command before execution!
 
 ## Features
 
-### 🛡️ Preventive Patterns
+### 🌟 Context Injection Patterns (The Magic Sauce!)
 
-Patterns catch mistakes **before** they happen:
+**Proactive** guidance > **Reactive** blocking. Context injection guides Claude's decisions BEFORE they happen:
 
-- **Block** dangerous operations (commit to main, force push to production) - recommended for most cases
-- **Warn** about risky actions (large file commits, modifying generated code)
-- **Ask** for confirmation (force push, deleting branches)
-  - ⚠️ **Cursor users:** "ask" is very disruptive - prefer "block" with smarter patterns instead!
-
-### 🎈 Context Injection Patterns
-
-Hooks aren't just for prevention! You can also inject helpful context into Claude's prompts for reminders, instructions, or just for fun.
+- Detect keywords in user prompts (e.g., "force push", "production", ".env")
+- Inject instructions into Claude's prompt
+- Non-disruptive - no permission dialogs
+- Claude sees guidance and makes better decisions upfront
 
 **Example use cases:**
 - Remind Claude about project conventions
-- Add time-sensitive information (deadlines, events)
-- Inject instructions based on keywords
-- Educational hints and tips
+- Warn about sensitive operations before Claude attempts them
+- Educational hints when using certain tools
 - Fun surprises like pizza parties!
 
 **How it works:**
-- **Claude Code**: Context added directly to Claude's prompt (Claude sees it!)
+- **Claude Code**: Context added directly to Claude's prompt (true magic!)
 - **Cursor**: Message shown as warning to user (user sees it, not Cursor AI)
 
-See `examples/basic-patterns.md` for the pizza party example!
+### 🛡️ Preventive Patterns (When Context Injection Can't Help)
+
+**Reactive** patterns catch mistakes after Claude decides to do them:
+
+- **Block** dangerous operations (commit to main, force push to production) - hard stop for severe consequences
+- **Warn** about risky actions (large file commits, modifying generated files) - educational
+- **Ask** for confirmation (last resort - most disruptive!)
+  - ⚠️ **Cursor users:** "ask" is very disruptive - prefer context injection or "block" instead!
+  - ⚠️ **Claude Code users:** "ask" less disruptive but still prefer context injection when possible
 
 ### 🧠 AI-Powered Generation
 

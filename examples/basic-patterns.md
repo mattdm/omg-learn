@@ -166,9 +166,9 @@ done
 exit 0
 ```
 
-## Context Injection Patterns
+## Context Injection Patterns (🌟 The Magic Sauce!)
 
-Beyond prevention, hooks can inject context into Claude's prompts for reminders, instructions, or just fun!
+Context injection is **proactive** - it guides Claude's decisions BEFORE they happen, rather than reacting after Claude makes a bad decision. This is the preferred approach when you can detect situations from the user's prompt!
 
 ### 9. Fun Example: Pizza Party Reminder
 
@@ -199,12 +199,22 @@ omg-learn enable pizza-party-excitement --global
 # Then say "pizza party" in your prompt!
 ```
 
+**Why context injection is better than ask:**
+- **Proactive vs Reactive:** Guides decisions upfront instead of blocking after
+- **Non-disruptive:** No permission dialogs
+- **Educational:** Claude learns what to do/avoid
+- **Examples:** "force push" → safety reminder, "production" → deployment checklist, ".env" → secrets warning
+
 **Other context injection ideas:**
 - Project-specific coding conventions
 - Reminders about upcoming deadlines
 - Instructions for handling sensitive files
 - Educational tips when using certain tools
 - Fun surprises for specific keywords
+
+**When to use prevention instead:**
+- Can't detect from prompt (e.g., checking git branch requires execution context)
+- Need hard stop for dangerous operations (commit secrets, delete critical files)
 
 ## Usage Examples
 
