@@ -1,7 +1,7 @@
 #!/bin/bash
-# prompt-checker.sh - omg-learn UserPromptSubmit Hook
+# before-prompt.sh - omg-learn Cursor Hook (beforeSubmitPrompt)
 # Checks user prompts against configured patterns
-# Now uses Python instead of jq for JSON operations
+# Cursor-compatible version
 
 # Determine script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,19 +10,20 @@ LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
 # Read hook input from stdin
 INPUT=$(cat)
 
-# Extract prompt text using Python
+# Extract prompt from Cursor's beforeSubmitPrompt format
 PROMPT=$(python3 -c "
 import json, sys
 try:
     data = json.loads('''$INPUT''')
+    # Cursor sends: {\"prompt\": \"user message...\"}
     print(data.get('prompt', ''))
 except:
     print('')
 ")
 
 # Load patterns from both global and project-local configs
-GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
-LOCAL_PATTERNS=".claude/omg-learn-patterns.json"
+GLOBAL_PATTERNS="$HOME/.cursor/omg-learn-patterns.json"
+LOCAL_PATTERNS=".cursor/omg-learn-patterns.json"
 
 # Merge patterns using Python (project-local overrides global for same ID)
 MERGED_PATTERNS=$(python3 "$LIB_DIR/json_utils.py" merge "$GLOBAL_PATTERNS" "$LOCAL_PATTERNS" 2>/dev/null || echo '{"patterns": []}')
@@ -32,15 +33,14 @@ PATTERNS=$(echo "$MERGED_PATTERNS" | python3 -c "import json, sys; print(json.du
 
 # Function to generate JSON response using Python
 json_response() {
-    local permission="$1"
-    local message_type="$2"  # user_message or agent_message
-    local message="$3"
+    local allowed="$1"
+    local message="$2"
 
     python3 -c "
 import json
-response = {'permission': '$permission'}
-if '$message_type' and '$message':
-    response['$message_type'] = '''$message'''
+response = {'allowed': $allowed}
+if '$message':
+    response['message'] = '''$message'''
 print(json.dumps(response))
 "
 }
@@ -76,8 +76,9 @@ print(json.dumps({
         continue
     fi
 
-    # Check if this pattern applies to UserPromptSubmit
-    if [[ "$PATTERN_HOOK" != "UserPromptSubmit" ]]; then
+    # Check if this pattern applies to UserPromptSubmit or beforeSubmitPrompt
+    # Accept both for compatibility
+    if [[ "$PATTERN_HOOK" != "UserPromptSubmit" ]] && [[ "$PATTERN_HOOK" != "beforeSubmitPrompt" ]]; then
         continue
     fi
 
@@ -88,16 +89,16 @@ print(json.dumps({
             # Pattern matched! Take action
             case "$ACTION" in
                 block)
-                    json_response "deny" "user_message" "$MESSAGE"
+                    json_response "false" "$MESSAGE"
                     exit 0
                     ;;
                 ask)
-                    json_response "ask" "user_message" "$MESSAGE"
+                    # Cursor doesn't support ask well for prompts, treat as warning
+                    json_response "true" "$MESSAGE"
                     exit 0
                     ;;
                 warn)
-                    # For UserPromptSubmit, inject message into agent context
-                    json_response "allow" "agent_message" "$MESSAGE"
+                    json_response "true" "$MESSAGE"
                     exit 0
                     ;;
             esac
@@ -106,5 +107,5 @@ print(json.dumps({
 done
 
 # No patterns matched, allow
-echo '{"permission": "allow"}'
+json_response "true" ""
 exit 0

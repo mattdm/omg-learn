@@ -1,7 +1,7 @@
 #!/bin/bash
-# pretool-checker.sh - omg-learn PreToolUse Hook
-# Checks tool usage against configured patterns
-# Now uses Python instead of jq for JSON operations
+# before-shell.sh - omg-learn Cursor Hook (beforeShellExecution)
+# Checks shell commands against configured patterns
+# Cursor-compatible version (uses beforeShellExecution event)
 
 # Determine script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,34 +10,23 @@ LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
 # Read hook input from stdin
 INPUT=$(cat)
 
-# Extract tool information using Python
-TOOL_INFO=$(python3 -c "
+# Extract command from Cursor's beforeShellExecution format
+COMMAND=$(python3 -c "
 import json, sys
 try:
     data = json.loads('''$INPUT''')
-    tool_name = data.get('tool_name', '')
-    tool_input_obj = data.get('tool_input', {})
-    # Try different keys for tool input
-    tool_input = (
-        tool_input_obj.get('command') or
-        tool_input_obj.get('file_path') or
-        tool_input_obj.get('content') or
-        ''
-    )
-    print(json.dumps({'tool_name': tool_name, 'tool_input': tool_input}))
+    # Cursor sends: {\"command\": \"git commit ...\"}
+    print(data.get('command', ''))
 except:
-    print(json.dumps({'tool_name': '', 'tool_input': ''}))
+    print('')
 ")
 
-TOOL_NAME=$(echo "$TOOL_INFO" | python3 -c "import json, sys; print(json.load(sys.stdin).get('tool_name', ''))")
-TOOL_INPUT=$(echo "$TOOL_INFO" | python3 -c "import json, sys; print(json.load(sys.stdin).get('tool_input', ''))")
-
 # Debug logging (optional - uncomment for troubleshooting)
-# echo "DEBUG: Tool: $TOOL_NAME, Input: $TOOL_INPUT" >> /tmp/omg-learn-hook.log
+# echo "DEBUG: Command: $COMMAND" >> /tmp/omg-learn-hook.log
 
 # Load patterns from both global and project-local configs
-GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
-LOCAL_PATTERNS=".claude/omg-learn-patterns.json"
+GLOBAL_PATTERNS="$HOME/.cursor/omg-learn-patterns.json"
+LOCAL_PATTERNS=".cursor/omg-learn-patterns.json"
 
 # Merge patterns using Python (project-local overrides global for same ID)
 MERGED_PATTERNS=$(python3 "$LIB_DIR/json_utils.py" merge "$GLOBAL_PATTERNS" "$LOCAL_PATTERNS" 2>/dev/null || echo '{"patterns": []}')
@@ -47,15 +36,14 @@ PATTERNS=$(echo "$MERGED_PATTERNS" | python3 -c "import json, sys; print(json.du
 
 # Function to generate JSON response using Python
 json_response() {
-    local permission="$1"
-    local message_type="$2"  # user_message or agent_message
-    local message="$3"
+    local allowed="$1"
+    local message="$2"
 
     python3 -c "
 import json
-response = {'permission': '$permission'}
-if '$message_type' and '$message':
-    response['$message_type'] = '''$message'''
+response = {'allowed': $allowed}
+if '$message':
+    response['message'] = '''$message'''
 print(json.dumps(response))
 "
 }
@@ -97,33 +85,33 @@ print(json.dumps({
         continue
     fi
 
-    # Skip if not a PreToolUse pattern
-    if [[ "$PATTERN_HOOK" != "PreToolUse" ]]; then
+    # Skip if not a PreToolUse pattern (or beforeShellExecution)
+    # Accept both for compatibility
+    if [[ "$PATTERN_HOOK" != "PreToolUse" ]] && [[ "$PATTERN_HOOK" != "beforeShellExecution" ]]; then
         continue
     fi
 
-    # Skip if matcher doesn't match tool name (matcher can be *, Bash, Write, Edit)
-    if [[ -n "$PATTERN_MATCHER" ]] && [[ "$PATTERN_MATCHER" != "*" ]]; then
-        if [[ "$TOOL_NAME" != "$PATTERN_MATCHER" ]]; then
-            continue
-        fi
+    # Skip if matcher doesn't match (Bash for shell commands)
+    if [[ -n "$PATTERN_MATCHER" ]] && [[ "$PATTERN_MATCHER" != "*" ]] && [[ "$PATTERN_MATCHER" != "Bash" ]]; then
+        continue
     fi
 
     # Run custom check script if specified
     if [[ -n "$CHECK_SCRIPT" ]] && [[ -f "$CHECK_SCRIPT" ]]; then
-        if ! "$CHECK_SCRIPT" "$TOOL_INPUT" 2>/dev/null; then
+        if ! "$CHECK_SCRIPT" "$COMMAND" 2>/dev/null; then
             # Custom script returned non-zero, pattern matched
             case "$ACTION" in
                 block)
-                    json_response "deny" "user_message" "$MESSAGE"
+                    json_response "false" "$MESSAGE"
                     exit 0
                     ;;
                 ask)
-                    json_response "ask" "user_message" "$MESSAGE"
+                    # Cursor doesn't support ask, treat as warning
+                    json_response "true" "⚠️ Warning: $MESSAGE"
                     exit 0
                     ;;
                 warn)
-                    json_response "allow" "agent_message" "⚠️ Warning: $MESSAGE"
+                    json_response "true" "⚠️ Warning: $MESSAGE"
                     exit 0
                     ;;
             esac
@@ -133,11 +121,11 @@ print(json.dumps({
 
     # Check regex pattern
     if [[ -n "$PATTERN_REGEX" ]]; then
-        # Check if tool input matches pattern
-        if echo "$TOOL_INPUT" | grep -qE "$PATTERN_REGEX"; then
+        # Check if command matches pattern
+        if echo "$COMMAND" | grep -qE "$PATTERN_REGEX"; then
             # If there's an exclude pattern, check it
             if [[ -n "$EXCLUDE_PATTERN" ]]; then
-                if echo "$TOOL_INPUT" | grep -qE "$EXCLUDE_PATTERN"; then
+                if echo "$COMMAND" | grep -qE "$EXCLUDE_PATTERN"; then
                     # Exclude pattern matched, skip this pattern
                     continue
                 fi
@@ -146,15 +134,16 @@ print(json.dumps({
             # Pattern matched! Take action
             case "$ACTION" in
                 block)
-                    json_response "deny" "user_message" "$MESSAGE"
+                    json_response "false" "$MESSAGE"
                     exit 0
                     ;;
                 ask)
-                    json_response "ask" "user_message" "$MESSAGE"
+                    # Cursor doesn't support ask, treat as warning
+                    json_response "true" "⚠️ Warning: $MESSAGE"
                     exit 0
                     ;;
                 warn)
-                    json_response "allow" "agent_message" "⚠️ Warning: $MESSAGE"
+                    json_response "true" "⚠️ Warning: $MESSAGE"
                     exit 0
                     ;;
             esac
@@ -163,5 +152,5 @@ print(json.dumps({
 done
 
 # No patterns matched, allow
-echo '{"permission": "allow"}'
+json_response "true" ""
 exit 0

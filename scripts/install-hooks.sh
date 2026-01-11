@@ -82,8 +82,20 @@ elif [[ "$PLATFORM" == "cursor" ]]; then
     echo "📝 Installing Cursor hooks..."
     cp "$SCRIPT_DIR/hooks/before-shell.sh" "$HOOKS_DIR/"
     chmod +x "$HOOKS_DIR/before-shell.sh"
+    cp "$SCRIPT_DIR/hooks/before-prompt.sh" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/before-prompt.sh"
     echo "   ✅ before-shell.sh"
+    echo "   ✅ before-prompt.sh"
 fi
+
+# Install lib directory for Python utilities (both platforms need this)
+LIB_TARGET_DIR="$(dirname "$HOOKS_DIR")/lib"
+mkdir -p "$LIB_TARGET_DIR"
+echo ""
+echo "📚 Installing Python libraries..."
+cp -r "$SCRIPT_DIR/lib/"* "$LIB_TARGET_DIR/"
+echo "   ✅ json_utils.py"
+echo "   ✅ (and other lib files)"
 
 # Create initial patterns file if it doesn't exist
 if [[ ! -f "$PATTERNS_FILE" ]]; then
@@ -172,22 +184,47 @@ elif [[ "$PLATFORM" == "cursor" ]]; then
         HOOKS_FILE="$HOME/.cursor/hooks.json"
     fi
 
+    # Determine paths: relative for project-local, absolute for global
+    if [[ "$SCOPE" == "global" ]]; then
+        # Global: use absolute paths
+        SHELL_HOOK_PATH="$HOOKS_DIR/before-shell.sh"
+        PROMPT_HOOK_PATH="$HOOKS_DIR/before-prompt.sh"
+    else
+        # Project-local: use relative paths (relative to hooks.json location)
+        # hooks.json is in .cursor/, so path is ./hooks/script.sh
+        SHELL_HOOK_PATH="./hooks/before-shell.sh"
+        PROMPT_HOOK_PATH="./hooks/before-prompt.sh"
+    fi
+
     # Create hooks file if it doesn't exist
     if [[ ! -f "$HOOKS_FILE" ]]; then
+        # Cursor hooks.json format (from cursor-hooks-fix-2026-01-11.md):
+        # - Requires "version": 1
+        # - Hooks nested inside "hooks" object
+        # - No "type": "command" field needed
         cat > "$HOOKS_FILE" <<EOF
 {
-  "beforeShellExecution": [
-    {
-      "type": "command",
-      "command": "$HOOKS_DIR/before-shell.sh"
-    }
-  ]
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "$SHELL_HOOK_PATH"
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "$PROMPT_HOOK_PATH"
+      }
+    ]
+  }
 }
 EOF
         echo "   ✅ Created $HOOKS_FILE"
     else
         echo "   ℹ️  Hooks file already exists: $HOOKS_FILE"
-        echo "      Please manually add: $HOOKS_DIR/before-shell.sh to beforeShellExecution"
+        echo "      Please manually add to hooks.json:"
+        echo "      - beforeShellExecution: $SHELL_HOOK_PATH"
+        echo "      - beforeSubmitPrompt: $PROMPT_HOOK_PATH"
     fi
 fi
 

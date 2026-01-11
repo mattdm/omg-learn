@@ -1,0 +1,564 @@
+#!/usr/bin/env python3
+"""
+omg-learn - Pattern management CLI for omg-learn skill.
+
+Manage patterns for mistake prevention across Claude Code and Cursor.
+"""
+
+import argparse
+import sys
+from pathlib import Path
+
+# Add lib directory to path
+LIB_DIR = Path(__file__).parent / 'lib'
+sys.path.insert(0, str(LIB_DIR))
+
+from pattern_manager import PatternManager
+from pattern_tester import PatternTester
+from cross_project import CrossProjectManager
+from display import (
+    print_pattern_list,
+    print_pattern_detail,
+    print_success,
+    print_error,
+    print_warning,
+    print_info,
+    print_separator,
+    success,
+    error,
+    warning,
+    info,
+    bold
+)
+
+
+def detect_platform():
+    """Auto-detect platform from directory structure."""
+    if (Path('.claude').exists() or (Path.home() / '.claude').exists()):
+        return 'claude'
+    elif (Path('.cursor').exists() or (Path.home() / '.cursor').exists()):
+        return 'cursor'
+    else:
+        return 'claude'  # default
+
+
+def cmd_list(args):
+    """List patterns."""
+    pm = PatternManager(platform=args.platform)
+    patterns = pm.list_patterns(scope=args.scope, enabled_only=args.enabled)
+
+    if not patterns:
+        print_info("No patterns found")
+        return 0
+
+    print_pattern_list(patterns)
+
+    # Print summary
+    total = len(patterns)
+    enabled = len([p for p in patterns if p.get('enabled', True)])
+    print()
+    print_info(f"{total} pattern(s) total, {enabled} enabled")
+
+    return 0
+
+
+def cmd_show(args):
+    """Show pattern details."""
+    pm = PatternManager(platform=args.platform)
+    result = pm.get_pattern(args.pattern_id)
+
+    if not result:
+        print_error(f"Pattern '{args.pattern_id}' not found")
+        return 1
+
+    pattern, scope = result
+    print_pattern_detail(pattern, scope)
+    return 0
+
+
+def cmd_enable(args):
+    """Enable a pattern."""
+    pm = PatternManager(platform=args.platform)
+
+    # Check if pattern exists first
+    result = pm.get_pattern(args.pattern_id)
+    if not result:
+        print_error(f"Pattern '{args.pattern_id}' not found")
+        return 1
+
+    pattern, detected_scope = result
+    scope = args.scope or detected_scope
+
+    if pm.enable_pattern(args.pattern_id, scope):
+        scope_text = "global" if scope == "global" else "local"
+        print_success(f"Enabled pattern: {args.pattern_id} ({scope_text})")
+        return 0
+    else:
+        print_error(f"Failed to enable pattern: {args.pattern_id}")
+        return 1
+
+
+def cmd_disable(args):
+    """Disable a pattern."""
+    pm = PatternManager(platform=args.platform)
+
+    # Check if pattern exists first
+    result = pm.get_pattern(args.pattern_id)
+    if not result:
+        print_error(f"Pattern '{args.pattern_id}' not found")
+        return 1
+
+    pattern, detected_scope = result
+    scope = args.scope or detected_scope
+
+    if pm.disable_pattern(args.pattern_id, scope):
+        scope_text = "global" if scope == "global" else "local"
+        print_success(f"Disabled pattern: {args.pattern_id} ({scope_text})")
+        return 0
+    else:
+        print_error(f"Failed to disable pattern: {args.pattern_id}")
+        return 1
+
+
+def cmd_delete(args):
+    """Delete a pattern."""
+    pm = PatternManager(platform=args.platform)
+
+    # Check if pattern exists first
+    result = pm.get_pattern(args.pattern_id)
+    if not result:
+        print_error(f"Pattern '{args.pattern_id}' not found")
+        return 1
+
+    pattern, detected_scope = result
+    scope = args.scope or detected_scope
+
+    if pm.delete_pattern(args.pattern_id, scope, confirm=not args.yes):
+        scope_text = "global" if scope == "global" else "local"
+        print_success(f"Deleted pattern: {args.pattern_id} ({scope_text})")
+        return 0
+    else:
+        print_error(f"Failed to delete pattern (or cancelled)")
+        return 1
+
+
+def cmd_test(args):
+    """Test a pattern against input."""
+    tester = PatternTester(platform=args.platform)
+    matched, action, message = tester.test_pattern(
+        args.pattern_id,
+        args.input,
+        args.tool
+    )
+
+    print(bold(f"Testing pattern: {args.pattern_id}"))
+    print(f"Input: {args.input}")
+    print(f"Tool: {args.tool}")
+    print_separator()
+
+    if matched:
+        print(success("✓ Pattern WOULD match"))
+        print()
+        print(f"  Action: {bold(action)}")
+        print(f"  Message: {message}")
+        return 0
+    else:
+        print(warning("✗ Pattern would NOT match"))
+        if message:
+            print()
+            print(f"  Reason: {message}")
+        return 0
+
+
+def cmd_simulate(args):
+    """Simulate hook execution for a command."""
+    tester = PatternTester(platform=args.platform)
+    result = tester.simulate_command(args.command, args.tool)
+
+    print(bold(f"Simulating command: {args.command}"))
+    print(f"Tool: {args.tool}")
+    print_separator()
+
+    print(f"Patterns checked: {result['patterns_checked']}")
+    print()
+
+    # Show all matches
+    matched_patterns = result['patterns_matched']
+    if matched_patterns:
+        print(bold("Patterns that would trigger:"))
+        for match in matched_patterns:
+            action_symbol = "🛑" if match['action'] == 'block' else "⚠️" if match['action'] == 'warn' else "❓"
+            print(f"  {action_symbol} {match['pattern_id']} ({match['action']})")
+            print(f"     {match['message']}")
+        print()
+
+    # Show result
+    if result['first_match']:
+        match = result['first_match']
+        if result['would_block']:
+            print(error(f"Result: Command would be BLOCKED"))
+            print(f"Triggered by: {match['pattern_id']}")
+        else:
+            print(success(f"Result: Command would be ALLOWED"))
+            if match['action'] == 'warn':
+                print(f"With warning from: {match['pattern_id']}")
+            elif match['action'] == 'ask':
+                print(f"After confirmation from: {match['pattern_id']}")
+    else:
+        print(success("Result: Command would be ALLOWED"))
+        print("No patterns matched")
+
+    return 0
+
+
+def cmd_sync_status(args):
+    """Show sync status between global and local."""
+    cpm = CrossProjectManager(platform=args.platform)
+    status = cpm.get_sync_status()
+
+    print(bold("Global vs Local Sync Status"))
+    print_separator()
+
+    if status['only_global']:
+        print(info(f"Only in global ({len(status['only_global'])}):"))
+        for pid in status['only_global']:
+            print(f"  • {pid}")
+        print()
+
+    if status['only_local']:
+        print(info(f"Only in local ({len(status['only_local'])}):"))
+        for pid in status['only_local']:
+            print(f"  • {pid}")
+        print()
+
+    if status['different']:
+        print(warning(f"Different versions ({len(status['different'])}):"))
+        for pid in status['different']:
+            print(f"  • {pid}")
+        print()
+
+    if status['same']:
+        print(success(f"Identical ({len(status['same'])}):"))
+        for pid in status['same'][:5]:  # Show first 5
+            print(f"  • {pid}")
+        if len(status['same']) > 5:
+            print(f"  ... and {len(status['same']) - 5} more")
+
+    return 0
+
+
+def cmd_export(args):
+    """Export patterns to file."""
+    cpm = CrossProjectManager(platform=args.platform)
+
+    if cpm.export_patterns(args.pattern_ids, args.output, include_scripts=not args.no_scripts):
+        print_success(f"Exported {len(args.pattern_ids)} pattern(s) to: {args.output}")
+        return 0
+    else:
+        print_error("Export failed")
+        return 1
+
+
+def cmd_import(args):
+    """Import patterns from file."""
+    cpm = CrossProjectManager(platform=args.platform)
+
+    results = cpm.import_patterns(args.file, args.scope, args.override)
+
+    if 'error' in results:
+        print_error(f"Import failed: {results['error']}")
+        return 1
+
+    print_success(f"Imported {len(results['imported'])} pattern(s)")
+
+    if results['skipped']:
+        print_warning(f"Skipped {len(results['skipped'])} pattern(s)")
+
+    if results['failed']:
+        print_error(f"Failed {len(results['failed'])} pattern(s)")
+
+    if results.get('scripts_extracted'):
+        print_info(f"Extracted {len(results['scripts_extracted'])} check script(s)")
+
+    return 0
+
+
+def main():
+    """Main CLI entry point."""
+    parser = argparse.ArgumentParser(
+        description='omg-learn pattern management CLI',
+        epilog='For more information, see the omg-learn skill documentation'
+    )
+
+    parser.add_argument(
+        '--platform',
+        choices=['claude', 'cursor'],
+        default=None,
+        help='Platform to use (auto-detected if not specified)'
+    )
+
+    parser.add_argument(
+        '--version',
+        action='version',
+        version='omg-learn 2.0.0'
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
+
+    # list command
+    list_parser = subparsers.add_parser(
+        'list',
+        help='List patterns',
+        description='List all patterns with their status'
+    )
+    list_parser.add_argument(
+        '--scope',
+        choices=['all', 'global', 'local'],
+        default='all',
+        help='Scope to list (default: all)'
+    )
+    list_parser.add_argument(
+        '--enabled',
+        action='store_true',
+        help='Only show enabled patterns'
+    )
+    list_parser.add_argument(
+        '--global',
+        dest='scope_flag_global',
+        action='store_const',
+        const='global',
+        help='Shortcut for --scope global'
+    )
+    list_parser.add_argument(
+        '--local',
+        dest='scope_flag_local',
+        action='store_const',
+        const='local',
+        help='Shortcut for --scope local'
+    )
+
+    # show command
+    show_parser = subparsers.add_parser(
+        'show',
+        help='Show pattern details',
+        description='Show detailed information about a pattern'
+    )
+    show_parser.add_argument(
+        'pattern_id',
+        help='Pattern ID to show'
+    )
+
+    # enable command
+    enable_parser = subparsers.add_parser(
+        'enable',
+        help='Enable a pattern',
+        description='Enable a pattern in the specified scope'
+    )
+    enable_parser.add_argument(
+        'pattern_id',
+        help='Pattern ID to enable'
+    )
+    enable_parser.add_argument(
+        '--scope',
+        choices=['global', 'local'],
+        help='Scope (auto-detected if not specified)'
+    )
+    enable_parser.add_argument(
+        '--global',
+        dest='scope_flag',
+        action='store_const',
+        const='global',
+        help='Enable in global scope'
+    )
+    enable_parser.add_argument(
+        '--local',
+        dest='scope_flag',
+        action='store_const',
+        const='local',
+        help='Enable in local scope'
+    )
+
+    # disable command
+    disable_parser = subparsers.add_parser(
+        'disable',
+        help='Disable a pattern',
+        description='Disable a pattern in the specified scope'
+    )
+    disable_parser.add_argument(
+        'pattern_id',
+        help='Pattern ID to disable'
+    )
+    disable_parser.add_argument(
+        '--scope',
+        choices=['global', 'local'],
+        help='Scope (auto-detected if not specified)'
+    )
+
+    # delete command
+    delete_parser = subparsers.add_parser(
+        'delete',
+        help='Delete a pattern',
+        description='Delete a pattern from the specified scope'
+    )
+    delete_parser.add_argument(
+        'pattern_id',
+        help='Pattern ID to delete'
+    )
+    delete_parser.add_argument(
+        '--scope',
+        choices=['global', 'local'],
+        help='Scope (auto-detected if not specified)'
+    )
+    delete_parser.add_argument(
+        '--yes',
+        action='store_true',
+        help='Skip confirmation prompt'
+    )
+
+    # test command
+    test_parser = subparsers.add_parser(
+        'test',
+        help='Test a pattern',
+        description='Test if a pattern would match given input'
+    )
+    test_parser.add_argument(
+        'pattern_id',
+        help='Pattern ID to test'
+    )
+    test_parser.add_argument(
+        'input',
+        help='Input to test against (command, file path, etc.)'
+    )
+    test_parser.add_argument(
+        '--tool',
+        default='Bash',
+        choices=['Bash', 'Write', 'Edit'],
+        help='Tool name (default: Bash)'
+    )
+
+    # simulate command
+    simulate_parser = subparsers.add_parser(
+        'simulate',
+        help='Simulate hook execution',
+        description='Simulate what hooks would do for a given command'
+    )
+    simulate_parser.add_argument(
+        'command',
+        help='Command to simulate'
+    )
+    simulate_parser.add_argument(
+        '--tool',
+        default='Bash',
+        choices=['Bash', 'Write', 'Edit'],
+        help='Tool name (default: Bash)'
+    )
+
+    # sync command
+    sync_parser = subparsers.add_parser(
+        'sync',
+        help='Show sync status',
+        description='Show differences between global and local patterns'
+    )
+
+    # export command
+    export_parser = subparsers.add_parser(
+        'export',
+        help='Export patterns',
+        description='Export patterns to a file (JSON or ZIP)'
+    )
+    export_parser.add_argument(
+        'pattern_ids',
+        nargs='+',
+        help='Pattern IDs to export'
+    )
+    export_parser.add_argument(
+        '-o', '--output',
+        required=True,
+        help='Output file (.json or .zip)'
+    )
+    export_parser.add_argument(
+        '--no-scripts',
+        action='store_true',
+        help='Do not include check scripts (ZIP only)'
+    )
+
+    # import command
+    import_parser = subparsers.add_parser(
+        'import',
+        help='Import patterns',
+        description='Import patterns from a file (JSON or ZIP)'
+    )
+    import_parser.add_argument(
+        'file',
+        help='File to import (.json or .zip)'
+    )
+    import_parser.add_argument(
+        '--scope',
+        choices=['global', 'local'],
+        help='Import scope (will ask if not specified)'
+    )
+    import_parser.add_argument(
+        '--override',
+        action='store_true',
+        help='Override existing patterns without asking'
+    )
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Auto-detect platform if not specified
+    if args.platform is None:
+        args.platform = detect_platform()
+
+    # Handle --global/--local flags for list command
+    if args.command == 'list':
+        if args.scope_flag_global:
+            args.scope = 'global'
+        elif args.scope_flag_local:
+            args.scope = 'local'
+
+    # Handle --global/--local flags for enable command
+    if args.command == 'enable' and hasattr(args, 'scope_flag') and args.scope_flag:
+        args.scope = args.scope_flag
+
+    # Execute command
+    if args.command == 'list':
+        return cmd_list(args)
+    elif args.command == 'show':
+        return cmd_show(args)
+    elif args.command == 'enable':
+        return cmd_enable(args)
+    elif args.command == 'disable':
+        return cmd_disable(args)
+    elif args.command == 'delete':
+        return cmd_delete(args)
+    elif args.command == 'test':
+        return cmd_test(args)
+    elif args.command == 'simulate':
+        return cmd_simulate(args)
+    elif args.command == 'sync':
+        return cmd_sync_status(args)
+    elif args.command == 'export':
+        return cmd_export(args)
+    elif args.command == 'import':
+        # Handle scope default for import
+        if not hasattr(args, 'scope') or args.scope is None:
+            args.scope = 'ask'
+        return cmd_import(args)
+    else:
+        parser.print_help()
+        return 1
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        print()
+        print_warning("Interrupted by user")
+        sys.exit(130)
+    except Exception as e:
+        print_error(f"Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
