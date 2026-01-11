@@ -11,52 +11,49 @@ echo "🔧 omg-learn Hook Installer"
 echo "============================"
 echo ""
 
-# Detect platform (supports .claude, .cursor, .agents, .agent)
-detect_platform() {
-    # Check for platform-specific directories (follow symlinks)
-    for dir in ".claude" ".cursor" ".agents" ".agent" "$HOME/.claude" "$HOME/.cursor" "$HOME/.agents" "$HOME/.agent"; do
-        if [[ -d "$dir" ]]; then
-            # Resolve symlinks
-            real_dir=$(readlink -f "$dir" 2>/dev/null || realpath "$dir" 2>/dev/null || echo "$dir")
-            
-            # Determine platform from directory name
-            if [[ "$real_dir" == *".claude"* ]] || [[ "$dir" == *".claude"* ]]; then
-                echo "claude"
-                return
-            elif [[ "$real_dir" == *".cursor"* ]] || [[ "$dir" == *".cursor"* ]]; then
-                echo "cursor"
-                return
-            elif [[ "$real_dir" == *".agents"* ]] || [[ "$real_dir" == *".agent"* ]] || \
-                 [[ "$dir" == *".agents"* ]] || [[ "$dir" == *".agent"* ]]; then
-                # For generic .agents/.agent, default to claude if it exists, otherwise cursor
-                if command -v claude &>/dev/null || [[ -f "$HOME/.claude/settings.json" ]]; then
-                    echo "claude"
-                else
-                    echo "cursor"
-                fi
-                return
+# Detect all platforms (supports .claude, .cursor, .agents, .agent)
+detect_platforms() {
+    local platforms=()
+
+    # Check for Claude Code
+    if [[ -d "$HOME/.claude" ]] || [[ -d ".claude" ]]; then
+        platforms+=("claude")
+    fi
+
+    # Check for Cursor
+    if [[ -d "$HOME/.cursor" ]] || [[ -d ".cursor" ]]; then
+        platforms+=("cursor")
+    fi
+
+    # Check for generic .agents/.agent - add both claude and cursor if they exist
+    if [[ -d "$HOME/.agents" ]] || [[ -d "$HOME/.agent" ]] || [[ -d ".agents" ]] || [[ -d ".agent" ]]; then
+        if command -v claude &>/dev/null || [[ -f "$HOME/.claude/settings.json" ]]; then
+            if [[ ! " ${platforms[@]} " =~ " claude " ]]; then
+                platforms+=("claude")
             fi
         fi
-    done
-    
-    echo "unknown"
+        if command -v cursor &>/dev/null || [[ -f "$HOME/.cursor/hooks.json" ]]; then
+            if [[ ! " ${platforms[@]} " =~ " cursor " ]]; then
+                platforms+=("cursor")
+            fi
+        fi
+    fi
+
+    echo "${platforms[@]}"
 }
 
-PLATFORM=$(detect_platform)
+PLATFORMS=($(detect_platforms))
 
-if [[ "$PLATFORM" == "unknown" ]]; then
+if [[ ${#PLATFORMS[@]} -eq 0 ]]; then
     echo "❌ Could not detect Claude Code or Cursor installation"
-    echo "   Please ensure you're running this from a project directory"
-    echo "   with one of these subdirectories:"
-    echo "     - .claude/ (Claude Code)"
-    echo "     - .cursor/ (Cursor)"
-    echo "     - .agents/ or .agent/ (generic)"
-    echo "   Or have one of these in your home directory:"
-    echo "     - ~/.claude/ or ~/.cursor/"
+    echo "   Please ensure you have one of these in your home directory:"
+    echo "     - ~/.claude/ (Claude Code)"
+    echo "     - ~/.cursor/ (Cursor)"
+    echo "     - ~/.agents/ or ~/.agent/ (generic)"
     exit 1
 fi
 
-echo "✅ Detected platform: $PLATFORM"
+echo "✅ Detected platform(s): ${PLATFORMS[@]}"
 echo ""
 
 # Ask for installation scope
@@ -67,16 +64,9 @@ read -p "Enter choice [1-2]: " SCOPE_CHOICE
 
 case $SCOPE_CHOICE in
     1)
-        HOOKS_DIR="$HOME/.$PLATFORM/hooks"
-        PATTERNS_FILE="$HOME/.$PLATFORM/omg-learn-patterns.json"
         SCOPE="global"
         ;;
     2)
-        if [[ ! -d ".$PLATFORM" ]]; then
-            mkdir -p ".$PLATFORM"
-        fi
-        HOOKS_DIR=".$PLATFORM/hooks"
-        PATTERNS_FILE=".$PLATFORM/omg-learn-patterns.json"
         SCOPE="project-local"
         ;;
     *)
@@ -86,15 +76,35 @@ case $SCOPE_CHOICE in
 esac
 
 echo ""
-echo "Installing hooks to: $HOOKS_DIR"
-echo "Patterns file: $PATTERNS_FILE"
-echo ""
 
-# Create hooks directory
-mkdir -p "$HOOKS_DIR"
+# Install hooks for each detected platform
+for PLATFORM in "${PLATFORMS[@]}"; do
+    echo "=========================================="
+    echo "Installing for: $PLATFORM"
+    echo "=========================================="
+    echo ""
 
-# Install hook scripts based on platform
-if [[ "$PLATFORM" == "claude" ]]; then
+    # Determine paths based on scope
+    if [[ "$SCOPE" == "global" ]]; then
+        HOOKS_DIR="$HOME/.$PLATFORM/hooks"
+        PATTERNS_FILE="$HOME/.$PLATFORM/omg-learn-patterns.json"
+    else
+        if [[ ! -d ".$PLATFORM" ]]; then
+            mkdir -p ".$PLATFORM"
+        fi
+        HOOKS_DIR=".$PLATFORM/hooks"
+        PATTERNS_FILE=".$PLATFORM/omg-learn-patterns.json"
+    fi
+
+    echo "Installing hooks to: $HOOKS_DIR"
+    echo "Patterns file: $PATTERNS_FILE"
+    echo ""
+
+    # Create hooks directory
+    mkdir -p "$HOOKS_DIR"
+
+    # Install hook scripts based on platform
+    if [[ "$PLATFORM" == "claude" ]]; then
     echo "📝 Installing Claude Code hooks..."
     cp "$SCRIPT_DIR/hooks/omg-learn-tool-checker.py" "$HOOKS_DIR/"
     chmod +x "$HOOKS_DIR/omg-learn-tool-checker.py"
@@ -247,7 +257,7 @@ fi
 if [[ "$PLATFORM" == "cursor" ]]; then
     echo ""
     echo "🔗 Installing Cursor rule..."
-    
+
     # Generate and install Cursor rule
     if [[ -f "$SKILL_DIR/SKILL.md" ]]; then
         if "$SCRIPT_DIR/generate-cursor-rule" "$SKILL_DIR/SKILL.md" --install 2>/dev/null; then
@@ -262,10 +272,25 @@ if [[ "$PLATFORM" == "cursor" ]]; then
 fi
 
 echo ""
-echo "✅ Installation complete!"
+
+done  # End of platform installation loop
+
+echo ""
+echo "=========================================="
+echo "✅ Installation complete for all platforms!"
+echo "=========================================="
+echo ""
+echo "Installed for: ${PLATFORMS[@]}"
 echo ""
 echo "Next steps:"
-echo "  1. Review the patterns file: $PATTERNS_FILE"
+echo "  1. Review your patterns files"
+if [[ "$SCOPE" == "global" ]]; then
+    [[ " ${PLATFORMS[@]} " =~ " claude " ]] && echo "     - Claude Code: ~/.claude/omg-learn-patterns.json"
+    [[ " ${PLATFORMS[@]} " =~ " cursor " ]] && echo "     - Cursor: ~/.cursor/omg-learn-patterns.json"
+else
+    [[ " ${PLATFORMS[@]} " =~ " claude " ]] && echo "     - Claude Code: .claude/omg-learn-patterns.json"
+    [[ " ${PLATFORMS[@]} " =~ " cursor " ]] && echo "     - Cursor: .cursor/omg-learn-patterns.json"
+fi
 echo "  2. Start using omg-learn - say 'omg!' when you spot a mistake"
 echo "  3. Create patterns through the guided workflow"
 echo ""
@@ -274,7 +299,7 @@ echo "  - Try saying 'omg!' in a prompt (should trigger the example pattern)"
 echo "  - Add custom patterns through the omg-learn skill workflow"
 echo ""
 
-if [[ "$PLATFORM" == "cursor" ]]; then
+if [[ " ${PLATFORMS[@]} " =~ " cursor " ]]; then
     echo "Cursor-specific notes:"
     echo "  - Skills are loaded via ~/.cursor/rules/omg-learn.mdc"
     echo "  - The rule points to the SKILL.md file in this directory"
