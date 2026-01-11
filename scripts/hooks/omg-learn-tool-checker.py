@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Optimized pretool-checker.py - Claude Code PreToolUse hook
+omg-learn-tool-checker.py - Claude Code PreToolUse hook
 Checks tool usage against configured patterns
 """
 

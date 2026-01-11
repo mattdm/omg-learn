@@ -96,12 +96,12 @@ mkdir -p "$HOOKS_DIR"
 # Install hook scripts based on platform
 if [[ "$PLATFORM" == "claude" ]]; then
     echo "📝 Installing Claude Code hooks..."
-    cp "$SCRIPT_DIR/hooks/pretool-checker.py" "$HOOKS_DIR/"
-    chmod +x "$HOOKS_DIR/pretool-checker.py"
-    cp "$SCRIPT_DIR/hooks/prompt-checker.py" "$HOOKS_DIR/"
-    chmod +x "$HOOKS_DIR/prompt-checker.py"
-    echo "   ✅ pretool-checker.py"
-    echo "   ✅ prompt-checker.py"
+    cp "$SCRIPT_DIR/hooks/omg-learn-tool-checker.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/omg-learn-tool-checker.py"
+    cp "$SCRIPT_DIR/hooks/omg-learn-prompt-checker.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/omg-learn-prompt-checker.py"
+    echo "   ✅ omg-learn-tool-checker.py"
+    echo "   ✅ omg-learn-prompt-checker.py"
 elif [[ "$PLATFORM" == "cursor" ]]; then
     echo "📝 Installing Cursor hooks..."
     cp "$SCRIPT_DIR/hooks/before-shell.py" "$HOOKS_DIR/"
@@ -168,7 +168,7 @@ if [[ "$PLATFORM" == "claude" ]]; then
                 "hooks": [
                   {
                     "type": "command",
-                    "command": "'"$HOOKS_DIR/pretool-checker.py"'"
+                    "command": "'"$HOOKS_DIR/omg-learn-tool-checker.py"'"
                   }
                 ]
               }
@@ -178,7 +178,7 @@ if [[ "$PLATFORM" == "claude" ]]; then
                 "hooks": [
                   {
                     "type": "command",
-                    "command": "'"$HOOKS_DIR/prompt-checker.py"'"
+                    "command": "'"$HOOKS_DIR/omg-learn-prompt-checker.py"'"
                   }
                 ]
               }

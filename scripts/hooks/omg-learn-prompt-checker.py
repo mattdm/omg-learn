@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Optimized prompt-checker.py - Claude Code UserPromptSubmit hook
+omg-learn-prompt-checker.py - Claude Code UserPromptSubmit hook
 Checks user prompts against configured patterns
 """
 

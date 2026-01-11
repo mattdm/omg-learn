@@ -227,12 +227,12 @@ This is imperceptible to users since hooks only fire on user actions (not hot pa
 **Claude Code:**
 ```bash
 # Check installation
-ls ~/.claude/hooks/pretool-checker.py
+ls ~/.claude/hooks/omg-learn-tool-checker.py
 cat ~/.claude/settings.json | grep hooks
 
 # Test manually
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit"}}' | \
-  ~/.claude/hooks/pretool-checker.py
+  ~/.claude/hooks/omg-learn-tool-checker.py
 ```
 
 **Cursor:**
@@ -257,7 +257,7 @@ omg-learn simulate "git commit -m 'fix'"
 
 ### Enable debug logging
 
-Add debug output to hook scripts (pretool-checker.py, etc.):
+Add debug output to hook scripts (omg-learn-tool-checker.py, etc.):
 ```python
 # Add at the top after imports:
 import sys
