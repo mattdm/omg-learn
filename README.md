@@ -74,9 +74,10 @@ Next time: Hook blocks the command before execution!
 
 Patterns catch mistakes **before** they happen:
 
-- **Block** dangerous operations (commit to main, force push to production)
+- **Block** dangerous operations (commit to main, force push to production) - recommended for most cases
 - **Warn** about risky actions (large file commits, modifying generated code)
 - **Ask** for confirmation (force push, deleting branches)
+  - ⚠️ **Cursor users:** "ask" is very disruptive - prefer "block" with smarter patterns instead!
 
 ### 🎈 Context Injection Patterns
 

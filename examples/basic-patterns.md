@@ -47,6 +47,8 @@ BRANCH=$(git branch --show-current 2>/dev/null)
 }
 ```
 
+**⚠️ Cursor users:** Consider using `"action": "block"` instead of "ask" for better UX. "ask" is very disruptive in Cursor!
+
 ### 3. Block Force Delete Branches
 
 ```json
@@ -61,6 +63,8 @@ BRANCH=$(git branch --show-current 2>/dev/null)
   "enabled": true
 }
 ```
+
+**⚠️ Cursor users:** Consider using `"action": "block"` instead of "ask" for better UX. "ask" is very disruptive in Cursor!
 
 ## Command Output Patterns
 
@@ -114,6 +118,8 @@ BRANCH=$(git branch --show-current 2>/dev/null)
   "enabled": true
 }
 ```
+
+**⚠️ Cursor users:** Consider using `"action": "block"` instead of "ask" for better UX. "ask" is very disruptive in Cursor!
 
 ### 7. Warn on Generated File Edits
 

@@ -140,14 +140,20 @@ For complex logic that can't be regex.
 Example: Branch checking, environment validation
 
 **Action:**
-- `block` → Prevent action entirely (PreToolUse only)
+- `block` → Prevent action entirely (PreToolUse only) - **Recommended** for most cases
 - `warn` → Allow with warning (PreToolUse), or inject context (UserPromptSubmit)
 - `ask` → Request confirmation (PreToolUse), or inject context (UserPromptSubmit)
+  - ⚠️ **CURSOR WARNING:** "ask" is VERY disruptive in Cursor! Prefer "block" with smarter patterns
 
 **Note on UserPromptSubmit:**
 - `warn`/`ask` actions inject the message as context into Claude's prompt (Claude Code only!)
 - `block` action shows error to user and prevents prompt submission
 - For Cursor, messages appear as warnings to user, not injected context
+
+**Platform differences for "ask":**
+- **Claude Code**: User-friendly confirmation, acceptable to use
+- **Cursor**: Very disruptive workflow interruption - AVOID except for exceptional cases
+- **Recommendation**: Use "block" with clear messages instead of "ask" for Cursor compatibility
 
 **Message:**
 Clear explanation with suggested fix.

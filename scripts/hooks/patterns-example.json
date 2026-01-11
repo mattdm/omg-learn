@@ -43,7 +43,8 @@
       "pattern": "git\\s+push.*(-f|--force)",
       "action": "ask",
       "message": "⚠️ You're about to force push. This can overwrite remote history. Are you sure?",
-      "enabled": false
+      "enabled": false,
+      "note": "CURSOR USERS: 'ask' is very disruptive! Consider using 'block' instead with smarter patterns."
     },
     {
       "id": "no-secrets-in-commits",

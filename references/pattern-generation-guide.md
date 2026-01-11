@@ -356,16 +356,23 @@ But blocks:
 - Use when the action will definitely cause problems
 - Examples: commit to main, force push to main, commit secrets
 - Message should explain why and suggest alternative
+- **Recommended** for most prevention patterns
 
 **warn:**
 - Use when action might be problematic but has legitimate uses
 - Examples: large file commits, modifying generated files
 - Message should educate about potential issues
+- Also used for context injection in UserPromptSubmit hooks
 
 **ask:**
-- Use when action requires careful consideration
+- Use when action requires careful consideration and confirmation
 - Examples: force push, deleting branches, modifying important files
 - Message should list criteria for proceeding
+- **⚠️ CURSOR WARNING:** "ask" actions are VERY disruptive in Cursor's workflow!
+  - Prefer "block" with smarter patterns and clear error messages
+  - Only use "ask" for truly exceptional cases
+  - In most cases where you'd use "ask", use "block" instead and let users disable the pattern if needed
+- **Claude Code:** "ask" is less disruptive, more acceptable to use
 
 ### Step 6: Write Clear Message
 
@@ -412,6 +419,25 @@ Verify:
 "hook": "PreToolUse"  // Works for Claude Code
 // Cursor users will use beforeShellExecution in their patterns
 ```
+
+**Action behavior differs:**
+
+**"ask" actions:**
+- **Claude Code**: User-friendly confirmation dialog, less disruptive
+- **Cursor**: VERY disruptive to workflow!
+  - **Recommendation**: AVOID "ask" in Cursor patterns
+  - Use "block" with clear messages instead
+  - Write smarter patterns to reduce false positives
+  - Only use "ask" for truly exceptional cases
+
+**"block" actions:**
+- Both platforms: Shows error message and prevents action
+- Better user experience in Cursor than "ask"
+- Prefer "block" with helpful error messages over "ask"
+
+**"warn" actions:**
+- Both platforms: Shows warning but allows action
+- Good for educational messages and context injection
 
 **For compatibility, teach users to create platform-specific patterns.**
 
