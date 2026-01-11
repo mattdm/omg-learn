@@ -9,8 +9,9 @@ import argparse
 import sys
 from pathlib import Path
 
-# Add lib directory to path
-LIB_DIR = Path(__file__).parent / 'lib'
+# Add lib directory to path (resolve symlinks)
+SCRIPT_PATH = Path(__file__).resolve()
+LIB_DIR = SCRIPT_PATH.parent / 'lib'
 sys.path.insert(0, str(LIB_DIR))
 
 from pattern_manager import PatternManager
