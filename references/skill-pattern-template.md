@@ -114,7 +114,30 @@ Options:
   - Skip (don't create pattern)"
 ```
 
-### Step 4: Generate Pattern JSON
+### Step 4: Ask About Scope (ALWAYS)
+
+**ALWAYS explicitly ask where to save the pattern - never assume!**
+
+Ask if the pattern should be global or local.
+
+**Example:**
+```
+Claude: "Should this pattern be global (all projects) or local (this project only)?
+
+Options:
+  - Global (~/.claude/omg-learn-patterns.json) - applies everywhere
+  - Local (.claude/omg-learn-patterns.json) - this project only
+
+Default suggestion: Match the skill scope
+[Since your database-migrations skill is global, I suggest making the pattern global too]"
+```
+
+**Decision guidance:**
+- If skill is global → suggest global pattern (but still ask!)
+- If skill is local → suggest local pattern (but still ask!)
+- User may want different scopes (skill global, pattern local) - that's okay!
+
+### Step 5: Generate Pattern JSON
 
 Based on user confirmation, generate the complete pattern JSON:
 
@@ -132,9 +155,11 @@ Based on user confirmation, generate the complete pattern JSON:
 }
 ```
 
-### Step 5: Add Pattern to File
+### Step 6: Add Pattern to File
 
-Write the pattern JSON to a temporary file or string, then add it to the patterns file.
+Write the pattern JSON to the appropriate patterns file based on the user's scope choice:
+- Global: `~/.claude/omg-learn-patterns.json` or `~/.cursor/omg-learn-patterns.json`
+- Local: `.claude/omg-learn-patterns.json` or `.cursor/omg-learn-patterns.json`
 
 **Note:** The actual CLI implementation for adding patterns will be simple and mechanical - it just receives structured JSON and adds it to the file. NO keyword extraction or AI logic in the CLI.
 
@@ -148,19 +173,34 @@ Write the pattern JSON to a temporary file or string, then add it to the pattern
    - Creates skill: `database-migrations.md`
    - Description: "Use when working with database schema changes. Migrations must be reversible with up() and down() functions."
 
-3. Claude reads the skill description and suggests keywords:
+3. Claude asks about skill scope:
+   ```
+   Should this skill be global (all projects) or local (this project only)?
+   ```
+
+4. User chooses: "Global"
+
+5. Claude reads the skill description and suggests keywords:
    ```
    I see these keywords: database, migration, schema
    Should I create a companion pattern?
    ```
 
-4. User confirms: "Yes"
+6. User confirms: "Yes"
 
-5. Claude generates pattern JSON using this template
+7. Claude asks about pattern scope:
+   ```
+   Should this pattern be global or local?
+   (Suggestion: Global, to match the skill scope)
+   ```
 
-6. Claude writes pattern to patterns file
+8. User confirms: "Global"
 
-7. Done! Next time user says "I need to update the database schema", the pattern triggers and reminds Claude to use the skill.
+9. Claude generates pattern JSON using this template
+
+10. Claude writes pattern to global patterns file: `~/.claude/omg-learn-patterns.json`
+
+11. Done! Next time user says "I need to update the database schema", the pattern triggers and reminds Claude to use the skill.
 
 ## When to Use Skill-Linked Patterns
 

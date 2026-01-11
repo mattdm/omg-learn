@@ -52,15 +52,24 @@ Ask:
 **Skill creation tip:** Include trigger contexts in description.
 Example: "Use when analyzing database code" or "When deploying to production"
 
-### 2. Check for Global Intent
+### 2. Ask About Scope (ALWAYS)
 
-If user says "globally", "system wide", "everywhere":
-→ Create global skill in `~/.claude/skills/` (Claude Code) or `~/.cursor/skills/` (Cursor)
+**ALWAYS explicitly ask the user about scope - never assume!**
 
-Otherwise:
-→ Create project-local skill in `.claude/skills/` (Claude Code) or `.cursor/skills/` (Cursor)
+Ask: "Should this skill be global (all projects) or local (this project only)?"
+
+**Options:**
+- **Global** → `~/.claude/skills/` (Claude Code) or `~/.cursor/skills/` (Cursor)
+  - Use for: General programming knowledge, universal best practices, cross-project patterns
+  - Example: "git best practices", "database migration patterns", "security guidelines"
+
+- **Local** → `.claude/skills/` (Claude Code) or `.cursor/skills/` (Cursor)
+  - Use for: Project-specific conventions, architecture decisions, team guidelines
+  - Example: "this project's auth flow", "our deployment checklist", "team code style"
 
 **Note:** Also supports `.agents/skills/` or `.agent/skills/` directories if present.
+
+**Default suggestion:** If unsure, suggest local first (less intrusive, easier to test).
 
 ### 3. Search for Existing Skills
 
@@ -122,11 +131,30 @@ Options:
 - **Customize** → Let user edit keywords list, then continue to Step 6.4
 - **Skip** → Don't create pattern (user can add manually later)
 
-**Step 6.4: Create and add pattern**
+**Step 6.4: Ask about pattern scope (ALWAYS)**
+
+**ALWAYS explicitly ask where to save the pattern - never assume!**
+
+Ask: "Should this pattern be global (all projects) or local (this project only)?"
+
+**Options:**
+- **Global** → `~/.claude/omg-learn-patterns.json` (Claude Code) or `~/.cursor/omg-learn-patterns.json` (Cursor)
+  - Use for: Universal patterns that apply everywhere
+  - Example: "no piping to head", "git safety checks"
+
+- **Local** → `.claude/omg-learn-patterns.json` (Claude Code) or `.cursor/omg-learn-patterns.json` (Cursor)
+  - Use for: Project-specific patterns
+  - Example: "this project's conventions", "team-specific reminders"
+
+**Default suggestion:** Match the skill scope (if skill is global, suggest global pattern; if skill is local, suggest local pattern)
+
+**Step 6.5: Create and add pattern**
 
 Generate the pattern JSON using the template from `references/skill-pattern-template.md`
 
-Add to patterns file with `skill_reference` linking back to skill
+Add to appropriate patterns file (global or local) based on user's choice
+
+Link back to skill with `skill_reference` field
 
 **Why this is the magic sauce:**
 - **Proactive:** Claude is reminded BEFORE attempting the task
