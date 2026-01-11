@@ -78,6 +78,23 @@ Patterns catch mistakes **before** they happen:
 - **Warn** about risky actions (large file commits, modifying generated code)
 - **Ask** for confirmation (force push, deleting branches)
 
+### 🎈 Context Injection Patterns
+
+Hooks aren't just for prevention! You can also inject helpful context into Claude's prompts for reminders, instructions, or just for fun.
+
+**Example use cases:**
+- Remind Claude about project conventions
+- Add time-sensitive information (deadlines, events)
+- Inject instructions based on keywords
+- Educational hints and tips
+- Fun surprises like pizza parties!
+
+**How it works:**
+- **Claude Code**: Context added directly to Claude's prompt (Claude sees it!)
+- **Cursor**: Message shown as warning to user (user sees it, not Cursor AI)
+
+See `examples/basic-patterns.md` for the pizza party example!
+
 ### 🧠 AI-Powered Generation
 
 The AI analyzes your mistake and auto-generates:

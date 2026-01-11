@@ -1,7 +1,7 @@
 ---
 name: omg-learn
 version: 2.0.0
-description: Learning from user corrections by creating skills and preventive patterns. Use when user says "omg!" during corrections, when user provides feedback to create persistent knowledge, or when user wants to ensure AI never makes the same mistake again.
+description: Learning from user corrections by creating skills and patterns. Patterns can prevent mistakes (block/warn/ask) or inject helpful context into prompts. Use when user says "omg!" during corrections, when user provides feedback to create persistent knowledge, or when user wants to ensure AI never makes the same mistake again.
 dependencies:
   - skill-creator
 ---
@@ -89,9 +89,13 @@ After user approval, create/update the skill file.
 - If **NO** → Done
 
 **When patterns make sense:**
-- Mistakes with specific commands or files
-- Detectable patterns (regex or script)
-- NOT for complex reasoning mistakes
+- **Prevention:** Mistakes with specific commands or files, detectable patterns (regex or script)
+- **Context injection:** Reminders about conventions, instructions based on keywords, educational hints
+- NOT for complex reasoning mistakes that require understanding
+
+**Pattern types:**
+- **Preventive patterns:** Block, warn, or ask before dangerous operations
+- **Context injection patterns:** Add helpful context to Claude's prompt based on keywords (Claude Code only)
 
 ### 7. Generate and Test Pattern
 
@@ -136,9 +140,14 @@ For complex logic that can't be regex.
 Example: Branch checking, environment validation
 
 **Action:**
-- `block` → Prevent action entirely
-- `warn` → Allow with warning
-- `ask` → Request confirmation
+- `block` → Prevent action entirely (PreToolUse only)
+- `warn` → Allow with warning (PreToolUse), or inject context (UserPromptSubmit)
+- `ask` → Request confirmation (PreToolUse), or inject context (UserPromptSubmit)
+
+**Note on UserPromptSubmit:**
+- `warn`/`ask` actions inject the message as context into Claude's prompt (Claude Code only!)
+- `block` action shows error to user and prevents prompt submission
+- For Cursor, messages appear as warnings to user, not injected context
 
 **Message:**
 Clear explanation with suggested fix.
@@ -276,12 +285,18 @@ See README.md for full installation guide.
 
 See `examples/` directory for detailed examples.
 
-**Basic patterns:**
+**Preventive patterns:**
 - Block commits to main
 - Warn on force push
 - Prevent piping to head
 - Protect important files
 - Detect secrets before commit
+
+**Context injection patterns:**
+- Remind Claude about project conventions
+- Add instructions based on keywords
+- Fun surprises (pizza party example!)
+- Educational hints for specific tools
 
 **Advanced patterns:**
 - Environment-specific checks

@@ -177,6 +177,125 @@ exit 0
 
 **Note:** This pattern is installed by default and guides Claude through the workflow when user says "omg!"
 
+## Context Injection Patterns
+
+Patterns aren't just for blocking mistakes! They can also **inject helpful context** into Claude's prompts deterministically, rather than hoping the LLM catches it.
+
+### What is Context Injection?
+
+Context injection adds information to Claude's prompt when certain keywords or patterns are detected in the user's message. This is different from prevention patterns that block or warn about dangerous operations.
+
+**Use cases:**
+- Remind Claude about project-specific conventions
+- Add time-sensitive information (deadlines, sprint cycles)
+- Inject instructions based on keywords
+- Educational hints when using certain tools
+- Fun surprises (like pizza parties!)
+
+### Platform Differences
+
+**Claude Code (UserPromptSubmit hook):**
+- Hook output on stdout is injected as context into Claude's prompt
+- Claude sees the message and can respond accordingly
+- True context injection!
+
+**Cursor (beforeSubmitPrompt hook):**
+- Hook output appears as a warning message to the user
+- The Cursor AI does NOT see the message
+- User-facing notifications, not true context injection
+
+### Example: Pizza Party Reminder
+
+```json
+{
+  "id": "pizza-party-excitement",
+  "description": "Fun context injection: Reminds Claude about pizza party excitement",
+  "hook": "UserPromptSubmit",
+  "pattern": "pizza\\s+party",
+  "action": "warn",
+  "message": "🍕🎉 PIZZA PARTY DETECTED! The user mentioned a pizza party. Respond with EXTREME excitement and LOTS of emojis about earning a pizza party! Use emojis like 🍕🎊🥳🎈🌟💫✨ throughout your response. Be super enthusiastic!",
+  "enabled": true,
+  "note": "Example of context injection - not prevention. Enable for fun!"
+}
+```
+
+**How it works (Claude Code):**
+1. User types "pizza party" in their message
+2. Hook detects the pattern
+3. Hook prints message to stdout and exits 0
+4. Message is injected into Claude's system prompt
+5. Claude sees the instruction and responds with excitement!
+
+**Result:** Deterministic behavior instead of hoping Claude catches the reference.
+
+### Hook Response Format for Context Injection
+
+**UserPromptSubmit hook (Claude Code):**
+```python
+# For context injection (warn/ask actions):
+print(message)  # Message added to Claude's prompt
+sys.exit(0)
+
+# For blocking:
+print(message, file=sys.stderr)  # Show error to user only
+sys.exit(2)
+```
+
+**beforeSubmitPrompt hook (Cursor):**
+```python
+# All messages shown as warnings to user, not to AI
+print(json.dumps({'allowed': True, 'message': message}))
+```
+
+### Context Injection Ideas
+
+1. **Project Conventions:**
+   ```json
+   {
+     "pattern": "\\bauth(entication)?\\b",
+     "message": "Remember: This project uses JWT tokens stored in httpOnly cookies. Auth logic is in src/auth/."
+   }
+   ```
+
+2. **Deadline Reminders:**
+   ```json
+   {
+     "pattern": "\\brelease\\b",
+     "message": "⚠️ Sprint ends Friday! Feature freeze is Thursday 5pm."
+   }
+   ```
+
+3. **Tool Guidelines:**
+   ```json
+   {
+     "pattern": "\\bdatabase\\b.*\\bmigration\\b",
+     "message": "Database migrations must be reversible. Always write both up() and down() functions."
+   }
+   ```
+
+4. **Sensitive File Handling:**
+   ```json
+   {
+     "pattern": "\\.env",
+     "message": "🔒 .env files contain secrets. Never commit, never read in responses, always use environment variables in code."
+   }
+   ```
+
+### When to Use Context Injection vs Prevention
+
+**Use prevention patterns (block/ask) when:**
+- The action will cause damage (commit secrets, delete files)
+- You need to stop the operation before it executes
+- The consequence is severe
+
+**Use context injection (warn) when:**
+- You want to remind Claude about something
+- You need to provide additional context
+- The goal is education, not blocking
+- You want deterministic instructions based on keywords
+
+**Key difference:** Prevention stops execution, context injection adds information.
+
 ## Pattern Generation Workflow
 
 When user says "omg!" about a mistake, follow these steps:

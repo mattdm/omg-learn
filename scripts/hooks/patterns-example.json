@@ -55,6 +55,16 @@
       "action": "block",
       "message": "ERROR: Potential secrets detected in files to be committed. Please review.",
       "enabled": false
+    },
+    {
+      "id": "pizza-party-excitement",
+      "description": "Fun context injection: Reminds Claude about pizza party excitement",
+      "hook": "UserPromptSubmit",
+      "pattern": "pizza\\s+party",
+      "action": "warn",
+      "message": "🍕🎉 PIZZA PARTY DETECTED! The user mentioned a pizza party. Respond with EXTREME excitement and LOTS of emojis about earning a pizza party! Use emojis like 🍕🎊🥳🎈🌟💫✨ throughout your response. Be super enthusiastic!",
+      "enabled": false,
+      "note": "Example of context injection - not prevention. Enable for fun! Works in Claude Code (true context injection) and Cursor (warning message)."
     }
   ]
 }

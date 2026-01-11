@@ -160,6 +160,46 @@ done
 exit 0
 ```
 
+## Context Injection Patterns
+
+Beyond prevention, hooks can inject context into Claude's prompts for reminders, instructions, or just fun!
+
+### 9. Fun Example: Pizza Party Reminder
+
+This pattern shows how hooks can inject helpful context instead of just blocking mistakes. When you mention "pizza party", Claude receives instructions to respond with extreme excitement.
+
+```json
+{
+  "id": "pizza-party-excitement",
+  "description": "Fun context injection: Reminds Claude about pizza party excitement",
+  "hook": "UserPromptSubmit",
+  "pattern": "pizza\\s+party",
+  "action": "warn",
+  "message": "🍕🎉 PIZZA PARTY DETECTED! The user mentioned a pizza party. Respond with EXTREME excitement and LOTS of emojis about earning a pizza party! Use emojis like 🍕🎊🥳🎈🌟💫✨ throughout your response. Be super enthusiastic!",
+  "enabled": false,
+  "note": "Example of context injection - not prevention. Enable for fun!"
+}
+```
+
+**Platform behavior:**
+- **Claude Code**: Message injected as context into Claude's prompt (Claude sees it and responds accordingly!)
+- **Cursor**: Message shown as warning to the user (user sees it, not the Cursor AI)
+
+**How to use:**
+```bash
+# Add to your patterns file
+omg-learn enable pizza-party-excitement --global
+
+# Then say "pizza party" in your prompt!
+```
+
+**Other context injection ideas:**
+- Project-specific coding conventions
+- Reminders about upcoming deadlines
+- Instructions for handling sensitive files
+- Educational tips when using certain tools
+- Fun surprises for specific keywords
+
 ## Usage Examples
 
 ### Enable a Pattern
