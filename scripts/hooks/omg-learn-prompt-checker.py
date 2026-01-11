@@ -19,7 +19,7 @@ try:
     data = json.loads(sys.stdin.read())
     prompt = data.get('prompt', '')
 except:
-    print(json.dumps({'permission': 'allow'}))
+    # Parse error - allow with no output
     sys.exit(0)
 
 # Load and merge patterns
@@ -56,13 +56,17 @@ for pattern in patterns:
             action = pattern.get('action', 'warn')
             message = pattern.get('message', 'Pattern matched')
 
+            # For UserPromptSubmit hooks:
+            # - Exit 0 with stdout = context added to Claude
+            # - Exit 2 with stderr = block prompt, show error to user only
             if action == 'block':
-                print(json.dumps({'permission': 'deny', 'user_message': message}))
-            elif action == 'ask':
-                print(json.dumps({'permission': 'ask', 'user_message': message}))
+                # Block the prompt and show error to user
+                print(message, file=sys.stderr)
+                sys.exit(2)
             else:
-                print(json.dumps({'permission': 'allow', 'agent_message': message}))
-            sys.exit(0)
+                # Add message as context for Claude (warn/ask)
+                print(message)
+                sys.exit(0)
 
-# No patterns matched, allow
-print(json.dumps({'permission': 'allow'}))
+# No patterns matched, allow (exit 0 with no output)
+sys.exit(0)
