@@ -1,7 +1,5 @@
 #!/bin/bash
-# pretool-checker.sh - omg-learn PreToolUse Hook
-# Checks tool usage against configured patterns
-# Now uses Python instead of jq for JSON operations
+# Optimized pretool-checker.sh - Single Python process for all operations
 
 # Determine script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,158 +8,110 @@ LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
 # Read hook input from stdin
 INPUT=$(cat)
 
-# Extract tool information using Python
-TOOL_INFO=$(python3 -c "
-import json, sys
+# Pattern file paths
+GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
+LOCAL_PATTERNS=".claude/omg-learn-patterns.json"
+
+# Single Python process handles everything
+python3 <<PYTHON
+import json
+import sys
+import re
+import subprocess
+from pathlib import Path
+
+# Parse input
 try:
     data = json.loads('''$INPUT''')
     tool_name = data.get('tool_name', '')
     tool_input_obj = data.get('tool_input', {})
-    # Try different keys for tool input
     tool_input = (
         tool_input_obj.get('command') or
         tool_input_obj.get('file_path') or
         tool_input_obj.get('content') or
         ''
     )
-    print(json.dumps({'tool_name': tool_name, 'tool_input': tool_input}))
 except:
-    print(json.dumps({'tool_name': '', 'tool_input': ''}))
-")
+    print(json.dumps({'permission': 'allow'}))
+    sys.exit(0)
 
-TOOL_NAME=$(echo "$TOOL_INFO" | python3 -c "import json, sys; print(json.load(sys.stdin).get('tool_name', ''))")
-TOOL_INPUT=$(echo "$TOOL_INFO" | python3 -c "import json, sys; print(json.load(sys.stdin).get('tool_input', ''))")
+# Load and merge patterns
+def load_patterns(file_path):
+    try:
+        with open(file_path, 'r') as f:
+            return json.load(f).get('patterns', [])
+    except:
+        return []
 
-# Debug logging (optional - uncomment for troubleshooting)
-# echo "DEBUG: Tool: $TOOL_NAME, Input: $TOOL_INPUT" >> /tmp/omg-learn-hook.log
+global_patterns = load_patterns('$GLOBAL_PATTERNS')
+local_patterns = load_patterns('$LOCAL_PATTERNS')
 
-# Load patterns from both global and project-local configs
-GLOBAL_PATTERNS="$HOME/.claude/omg-learn-patterns.json"
-LOCAL_PATTERNS=".claude/omg-learn-patterns.json"
-
-# Merge patterns using Python (project-local overrides global for same ID)
-MERGED_PATTERNS=$(python3 "$LIB_DIR/json_utils.py" merge "$GLOBAL_PATTERNS" "$LOCAL_PATTERNS" 2>/dev/null || echo '{"patterns": []}')
-
-# Get array of patterns
-PATTERNS=$(echo "$MERGED_PATTERNS" | python3 -c "import json, sys; print(json.dumps(json.load(sys.stdin).get('patterns', [])))")
-
-# Function to generate JSON response using Python
-json_response() {
-    local permission="$1"
-    local message_type="$2"  # user_message or agent_message
-    local message="$3"
-
-    python3 -c "
-import json
-response = {'permission': '$permission'}
-if '$message_type' and '$message':
-    response['$message_type'] = '''$message'''
-print(json.dumps(response))
-"
-}
+# Merge (local overrides global by ID)
+patterns_by_id = {p['id']: p for p in global_patterns if 'id' in p}
+patterns_by_id.update({p['id']: p for p in local_patterns if 'id' in p})
+patterns = list(patterns_by_id.values())
 
 # Check each pattern
-echo "$PATTERNS" | python3 -c "
-import json, sys
-patterns = json.load(sys.stdin)
 for pattern in patterns:
-    print(json.dumps(pattern))
-" | while IFS= read -r pattern; do
-    # Extract pattern fields using Python
-    PATTERN_DATA=$(python3 -c "
-import json, sys
-pattern = json.loads('''$pattern''')
-print(json.dumps({
-    'enabled': pattern.get('enabled', True),
-    'hook': pattern.get('hook', ''),
-    'matcher': pattern.get('matcher', ''),
-    'pattern': pattern.get('pattern', ''),
-    'exclude_pattern': pattern.get('exclude_pattern', ''),
-    'action': pattern.get('action', 'warn'),
-    'message': pattern.get('message', 'Pattern matched'),
-    'check_script': pattern.get('check_script', '')
-}))
-")
-
-    ENABLED=$(echo "$PATTERN_DATA" | python3 -c "import json, sys; print('true' if json.load(sys.stdin).get('enabled') else 'false')")
-    PATTERN_HOOK=$(echo "$PATTERN_DATA" | python3 -c "import json, sys; print(json.load(sys.stdin).get('hook', ''))")
-    PATTERN_MATCHER=$(echo "$PATTERN_DATA" | python3 -c "import json, sys; print(json.load(sys.stdin).get('matcher', ''))")
-    PATTERN_REGEX=$(echo "$PATTERN_DATA" | python3 -c "import json, sys; print(json.load(sys.stdin).get('pattern', ''))")
-    EXCLUDE_PATTERN=$(echo "$PATTERN_DATA" | python3 -c "import json, sys; print(json.load(sys.stdin).get('exclude_pattern', ''))")
-    ACTION=$(echo "$PATTERN_DATA" | python3 -c "import json, sys; print(json.load(sys.stdin).get('action', 'warn'))")
-    MESSAGE=$(echo "$PATTERN_DATA" | python3 -c "import json, sys; print(json.load(sys.stdin).get('message', 'Pattern matched'))")
-    CHECK_SCRIPT=$(echo "$PATTERN_DATA" | python3 -c "import json, sys; print(json.load(sys.stdin).get('check_script', ''))")
-
-    # Skip if pattern is disabled
-    if [[ "$ENABLED" != "true" ]]; then
+    # Skip if disabled
+    if not pattern.get('enabled', True):
         continue
-    fi
 
-    # Skip if not a PreToolUse pattern
-    if [[ "$PATTERN_HOOK" != "PreToolUse" ]]; then
+    # Skip if not PreToolUse
+    if pattern.get('hook') != 'PreToolUse':
         continue
-    fi
 
-    # Skip if matcher doesn't match tool name (matcher can be *, Bash, Write, Edit)
-    if [[ -n "$PATTERN_MATCHER" ]] && [[ "$PATTERN_MATCHER" != "*" ]]; then
-        if [[ "$TOOL_NAME" != "$PATTERN_MATCHER" ]]; then
-            continue
-        fi
-    fi
-
-    # Run custom check script if specified
-    if [[ -n "$CHECK_SCRIPT" ]] && [[ -f "$CHECK_SCRIPT" ]]; then
-        if ! "$CHECK_SCRIPT" "$TOOL_INPUT" 2>/dev/null; then
-            # Custom script returned non-zero, pattern matched
-            case "$ACTION" in
-                block)
-                    json_response "deny" "user_message" "$MESSAGE"
-                    exit 0
-                    ;;
-                ask)
-                    json_response "ask" "user_message" "$MESSAGE"
-                    exit 0
-                    ;;
-                warn)
-                    json_response "allow" "agent_message" "⚠️ Warning: $MESSAGE"
-                    exit 0
-                    ;;
-            esac
-        fi
+    # Check matcher
+    matcher = pattern.get('matcher', '')
+    if matcher and matcher != '*' and matcher != tool_name:
         continue
-    fi
+
+    # Run check script if present
+    check_script = pattern.get('check_script', '')
+    if check_script:
+        try:
+            result = subprocess.run(
+                [check_script, tool_input],
+                capture_output=True,
+                timeout=5
+            )
+            if result.returncode != 0:
+                # Pattern matched
+                action = pattern.get('action', 'warn')
+                message = pattern.get('message', 'Pattern matched')
+
+                if action == 'block':
+                    print(json.dumps({'permission': 'deny', 'user_message': message}))
+                elif action == 'ask':
+                    print(json.dumps({'permission': 'ask', 'user_message': message}))
+                else:
+                    print(json.dumps({'permission': 'allow', 'agent_message': f'⚠️ Warning: {message}'}))
+                sys.exit(0)
+        except:
+            pass
+        continue
 
     # Check regex pattern
-    if [[ -n "$PATTERN_REGEX" ]]; then
-        # Check if tool input matches pattern
-        if echo "$TOOL_INPUT" | grep -qE "$PATTERN_REGEX"; then
-            # If there's an exclude pattern, check it
-            if [[ -n "$EXCLUDE_PATTERN" ]]; then
-                if echo "$TOOL_INPUT" | grep -qE "$EXCLUDE_PATTERN"; then
-                    # Exclude pattern matched, skip this pattern
-                    continue
-                fi
-            fi
+    pattern_regex = pattern.get('pattern', '')
+    if pattern_regex:
+        if re.search(pattern_regex, tool_input):
+            # Check exclude pattern
+            exclude = pattern.get('exclude_pattern', '')
+            if exclude and re.search(exclude, tool_input):
+                continue
 
-            # Pattern matched! Take action
-            case "$ACTION" in
-                block)
-                    json_response "deny" "user_message" "$MESSAGE"
-                    exit 0
-                    ;;
-                ask)
-                    json_response "ask" "user_message" "$MESSAGE"
-                    exit 0
-                    ;;
-                warn)
-                    json_response "allow" "agent_message" "⚠️ Warning: $MESSAGE"
-                    exit 0
-                    ;;
-            esac
-        fi
-    fi
-done
+            # Pattern matched!
+            action = pattern.get('action', 'warn')
+            message = pattern.get('message', 'Pattern matched')
+
+            if action == 'block':
+                print(json.dumps({'permission': 'deny', 'user_message': message}))
+            elif action == 'ask':
+                print(json.dumps({'permission': 'ask', 'user_message': message}))
+            else:
+                print(json.dumps({'permission': 'allow', 'agent_message': f'⚠️ Warning: {message}'}))
+            sys.exit(0)
 
 # No patterns matched, allow
-echo '{"permission": "allow"}'
-exit 0
+print(json.dumps({'permission': 'allow'}))
+PYTHON

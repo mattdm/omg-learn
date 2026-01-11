@@ -88,15 +88,6 @@ elif [[ "$PLATFORM" == "cursor" ]]; then
     echo "   ✅ before-prompt.sh"
 fi
 
-# Install lib directory for Python utilities (both platforms need this)
-LIB_TARGET_DIR="$(dirname "$HOOKS_DIR")/lib"
-mkdir -p "$LIB_TARGET_DIR"
-echo ""
-echo "📚 Installing Python libraries..."
-cp -r "$SCRIPT_DIR/lib/"* "$LIB_TARGET_DIR/"
-echo "   ✅ json_utils.py"
-echo "   ✅ (and other lib files)"
-
 # Create initial patterns file if it doesn't exist
 if [[ ! -f "$PATTERNS_FILE" ]]; then
     echo ""
