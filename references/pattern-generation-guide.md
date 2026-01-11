@@ -165,17 +165,17 @@ exit 0
 **Pattern:**
 ```json
 {
-  "id": "omg-detection",
-  "description": "Detect omg! in user prompts",
+  "id": "omg-learn-trigger",
+  "description": "Detects 'omg!' to trigger the mistake-learning workflow",
   "hook": "UserPromptSubmit",
   "pattern": "[Oo][Mm][Gg]!",
   "action": "warn",
-  "message": "💡 Detected 'omg!' - Triggering omg-learn skill to capture this mistake.",
+  "message": "🤦 User caught a mistake! Follow the omg-learn workflow:\n1. Acknowledge the mistake\n2. Ask: What tool did I misuse? (Bash/Write/Edit/Prompt)\n3. Ask: What was the problematic input/behavior?\n4. Design pattern: hook, matcher, regex, action, message\n5. Test with omg-learn test\n6. Save the pattern",
   "enabled": true
 }
 ```
 
-**Note:** This is case-insensitive because UserPromptSubmit hooks use `-i` flag
+**Note:** This pattern is installed by default and guides Claude through the workflow when user says "omg!"
 
 ## Pattern Generation Workflow
 
