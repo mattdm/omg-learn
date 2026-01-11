@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""
+generate-cursor-rule - Generate Cursor .mdc rule files from SKILL.md
+
+Parses SKILL.md YAML frontmatter and generates a Cursor rule that points to it.
+This keeps Cursor rules in sync with the canonical SKILL.md description.
+
+Usage:
+    ./scripts/generate-cursor-rule SKILL.md [-o output.mdc] [--install]
+
+No external dependencies (Python 3.6+ only).
+"""
+
+import argparse
+import os
+import re
+import sys
+from pathlib import Path
+
+
+def parse_yaml_frontmatter(content: str) -> dict:
+    """
+    Parse YAML frontmatter from markdown file.
+    
+    Returns dict with frontmatter fields or empty dict if no frontmatter.
+    """
+    # Match YAML frontmatter between --- delimiters
+    match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+    if not match:
+        return {}
+    
+    yaml_content = match.group(1)
+    frontmatter = {}
+    
+    # Simple YAML parser (handles key: value and key: |
+    # multi-line values)
+    current_key = None
+    multiline_value = []
+    in_multiline = False
+    
+    for line in yaml_content.split('\n'):
+        # Check for key: value or key: | pattern
+        key_match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)', line)
+        
+        if key_match and not in_multiline:
+            if current_key and multiline_value:
+                frontmatter[current_key] = '\n'.join(multiline_value).strip()
+                multiline_value = []
+            
+            current_key = key_match.group(1)
+            value = key_match.group(2).strip()
+            
+            if value == '|' or value == '>':
+                in_multiline = True
+            elif value:
+                frontmatter[current_key] = value
+            else:
+                frontmatter[current_key] = ''
+        elif in_multiline:
+            # In multiline mode, collect indented lines
+            if line.strip():
+                multiline_value.append(line.strip())
+            elif multiline_value:
+                # Empty line ends multiline
+                frontmatter[current_key] = '\n'.join(multiline_value).strip()
+                multiline_value = []
+                in_multiline = False
+                current_key = None
+    
+    # Handle last multiline value
+    if current_key and multiline_value:
+        frontmatter[current_key] = '\n'.join(multiline_value).strip()
+    
+    return frontmatter
+
+
+def resolve_path(path: Path) -> Path:
+    """
+    Resolve path, following symlinks and making absolute.
+    """
+    return path.expanduser().resolve()
+
+
+def generate_cursor_rule(skill_path: Path, output_path: Path = None, install: bool = False) -> str:
+    """
+    Generate Cursor .mdc rule from SKILL.md file.
+    
+    Args:
+        skill_path: Path to SKILL.md file
+        output_path: Optional output path for .mdc file
+        install: If True, install to ~/.cursor/rules/
+    
+    Returns:
+        Path where rule was written
+    """
+    # Resolve skill path (follow symlinks)
+    skill_path = resolve_path(skill_path)
+    
+    if not skill_path.exists():
+        print(f"Error: {skill_path} does not exist", file=sys.stderr)
+        sys.exit(1)
+    
+    if not skill_path.is_file():
+        print(f"Error: {skill_path} is not a file", file=sys.stderr)
+        sys.exit(1)
+    
+    # Read SKILL.md
+    try:
+        with open(skill_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        print(f"Error reading {skill_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Parse frontmatter
+    frontmatter = parse_yaml_frontmatter(content)
+    
+    if not frontmatter:
+        print(f"Warning: No YAML frontmatter found in {skill_path}", file=sys.stderr)
+    
+    # Extract fields
+    name = frontmatter.get('name', skill_path.stem)
+    description = frontmatter.get('description', f'Load {name} skill')
+    globs = frontmatter.get('globs', '')
+    
+    # Determine output path
+    if install:
+        output_path = Path.home() / '.cursor' / 'rules' / f'{name}.mdc'
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    elif output_path:
+        output_path = Path(output_path).expanduser()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        output_path = skill_path.parent / f'{name}.mdc'
+    
+    # Get skill directory (parent of SKILL.md)
+    skill_dir = skill_path.parent
+    
+    # Generate .mdc content
+    mdc_content = f"""---
+description: {description}
+globs: {globs}
+alwaysApply: false
+---
+Load and follow the {name} skill instructions.
+
+Read: {skill_path}
+
+Base directory for resolving references/, scripts/, assets/: {skill_dir}/
+"""
+    
+    # Write .mdc file
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(mdc_content)
+    except Exception as e:
+        print(f"Error writing {output_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+    
+    return str(output_path)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Generate Cursor .mdc rule from SKILL.md',
+        epilog='Example: ./scripts/generate-cursor-rule SKILL.md --install'
+    )
+    parser.add_argument('skill_path', help='Path to SKILL.md file')
+    parser.add_argument('-o', '--output', help='Output path for .mdc file')
+    parser.add_argument('--install', action='store_true',
+                       help='Install to ~/.cursor/rules/')
+    parser.add_argument('--version', action='version', version='generate-cursor-rule 1.0.0')
+    
+    args = parser.parse_args()
+    
+    # Generate rule
+    output_path = generate_cursor_rule(
+        Path(args.skill_path),
+        Path(args.output) if args.output else None,
+        args.install
+    )
+    
+    print(f"✓ Generated Cursor rule: {output_path}")
+    if args.install:
+        print(f"✓ Installed to ~/.cursor/rules/")
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nInterrupted", file=sys.stderr)
+        sys.exit(130)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

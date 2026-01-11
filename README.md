@@ -1,10 +1,10 @@
 # omg-learn - Learn from Mistakes, Never Repeat Them
 
-A Claude Code/Cursor skill that learns from your corrections and creates **preventive patterns** to catch mistakes before they happen.
+A skill for Claude Code and Cursor that learns from your corrections and creates **preventive patterns** to catch mistakes before they happen.
 
 ## What is omg-learn?
 
-When you say **"omg!"** while correcting Claude, omg-learn:
+When you say **"omg!"** while correcting the AI, omg-learn:
 
 1. **Creates a skill** from the correction (permanent knowledge)
 2. **Generates a preventive pattern** (catches it before it happens again)
@@ -17,6 +17,7 @@ When you say **"omg!"** while correcting Claude, omg-learn:
 
 ### Installation
 
+**Claude Code:**
 ```bash
 # Navigate to the skill directory
 cd ~/.claude/skills/omg-learn
@@ -27,6 +28,23 @@ cd ~/.claude/skills/omg-learn
 # Verify installation
 omg-learn list
 ```
+
+**Cursor:**
+```bash
+# Navigate to the skill directory
+cd ~/.cursor/skills/omg-learn
+
+# Install hooks and CLI
+./scripts/install-hooks.sh
+
+# Generate and install Cursor rule
+./scripts/generate-cursor-rule SKILL.md --install
+
+# Verify installation
+omg-learn list
+```
+
+**Note:** Also supports `.agents/` or `.agent/` directories if you prefer generic naming.
 
 ### First Use
 
@@ -42,7 +60,7 @@ omg-learn list
 ```
 User: "omg! You used npm test | head -20 and missed the test failures at the end!"
 
-Claude:
+AI Assistant:
 - Creates skill about command output handling
 - Generates pattern: \|.*\bhead\b (matches pipe to head)
 - Tests it: ✓ Blocks "npm test | head -20"
@@ -64,7 +82,7 @@ Patterns catch mistakes **before** they happen:
 
 ### 🧠 AI-Powered Generation
 
-Claude analyzes your mistake and auto-generates:
+The AI analyzes your mistake and auto-generates:
 
 - Regex pattern to detect it
 - Exclude pattern to avoid false positives
@@ -207,6 +225,7 @@ This is imperceptible to users since hooks only fire on user actions (not hot pa
 
 ### Hooks not triggering?
 
+**Claude Code:**
 ```bash
 # Check installation
 ls ~/.claude/hooks/pretool-checker.sh
@@ -215,6 +234,16 @@ cat ~/.claude/settings.json | grep hooks
 # Test manually
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit"}}' | \
   ~/.claude/hooks/pretool-checker.sh
+```
+
+**Cursor:**
+```bash
+# Check installation
+ls ~/.cursor/hooks/before-shell.sh
+cat ~/.cursor/hooks.json
+
+# Test manually
+echo '{"command":"git commit"}' | ~/.cursor/hooks/before-shell.sh
 ```
 
 ### Pattern not matching?
@@ -249,6 +278,6 @@ See LICENSE file.
 
 ## Credits
 
-Built with Claude Sonnet 4.5 using the Claude Code CLI.
+Built with AI assistance (Claude Sonnet 4.5) using the Claude Code CLI.
 
 **Co-Authored-By:** Claude Sonnet 4.5 <noreply@anthropic.com>

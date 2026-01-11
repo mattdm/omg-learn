@@ -1,0 +1,10 @@
+---
+description: Learning from user corrections by creating skills and preventive patterns. Use when user says "omg!" during corrections, when user provides feedback to create persistent knowledge, or when user wants to ensure AI never makes the same mistake again.
+globs: 
+alwaysApply: false
+---
+Load and follow the omg-learn skill instructions.
+
+Read: /home/mattdm/code/omg-learn/SKILL.md
+
+Base directory for resolving references/, scripts/, assets/: /home/mattdm/code/omg-learn/

@@ -2,6 +2,11 @@
 
 Simple, commonly-used patterns for everyday mistake prevention.
 
+**Note:** In examples below, `<platform>` should be replaced with:
+- `.claude` for Claude Code
+- `.cursor` for Cursor
+- `.agents` or `.agent` for generic setups
+
 ## Git Safety Patterns
 
 ### 1. Block Commits to Main
@@ -13,7 +18,7 @@ Simple, commonly-used patterns for everyday mistake prevention.
   "hook": "PreToolUse",
   "matcher": "Bash",
   "pattern": "git\\s+commit",
-  "check_script": "./.claude/scripts/patterns/check-branch.sh",
+  "check_script": "./<platform>/scripts/patterns/check-branch.sh",
   "action": "block",
   "message": "ERROR: Direct commits to main/master not allowed.\n\nCreate a feature branch:\n  git checkout -b feature/your-feature",
   "enabled": true
@@ -136,7 +141,7 @@ BRANCH=$(git branch --show-current 2>/dev/null)
   "hook": "PreToolUse",
   "matcher": "Bash",
   "pattern": "git\\s+(commit|add)",
-  "check_script": "./.claude/scripts/patterns/check-secrets.sh",
+  "check_script": "./<platform>/scripts/patterns/check-secrets.sh",
   "action": "block",
   "message": "🚨 SECRETS DETECTED in staged files!\n\nFound patterns matching:\n  • API keys\n  • Passwords\n  • Private keys\n  • Tokens\n\nNEVER commit secrets!\n\nRemove secrets, then commit again.",
   "enabled": true

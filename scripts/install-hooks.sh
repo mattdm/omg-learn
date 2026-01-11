@@ -11,15 +11,35 @@ echo "🔧 omg-learn Hook Installer"
 echo "============================"
 echo ""
 
-# Detect platform
+# Detect platform (supports .claude, .cursor, .agents, .agent)
 detect_platform() {
-    if [[ -d ".claude" ]] || [[ -d "$HOME/.claude" ]]; then
-        echo "claude"
-    elif [[ -d ".cursor" ]] || [[ -d "$HOME/.cursor" ]]; then
-        echo "cursor"
-    else
-        echo "unknown"
-    fi
+    # Check for platform-specific directories (follow symlinks)
+    for dir in ".claude" ".cursor" ".agents" ".agent" "$HOME/.claude" "$HOME/.cursor" "$HOME/.agents" "$HOME/.agent"; do
+        if [[ -d "$dir" ]]; then
+            # Resolve symlinks
+            real_dir=$(readlink -f "$dir" 2>/dev/null || realpath "$dir" 2>/dev/null || echo "$dir")
+            
+            # Determine platform from directory name
+            if [[ "$real_dir" == *".claude"* ]] || [[ "$dir" == *".claude"* ]]; then
+                echo "claude"
+                return
+            elif [[ "$real_dir" == *".cursor"* ]] || [[ "$dir" == *".cursor"* ]]; then
+                echo "cursor"
+                return
+            elif [[ "$real_dir" == *".agents"* ]] || [[ "$real_dir" == *".agent"* ]] || \
+                 [[ "$dir" == *".agents"* ]] || [[ "$dir" == *".agent"* ]]; then
+                # For generic .agents/.agent, default to claude if it exists, otherwise cursor
+                if command -v claude &>/dev/null || [[ -f "$HOME/.claude/settings.json" ]]; then
+                    echo "claude"
+                else
+                    echo "cursor"
+                fi
+                return
+            fi
+        fi
+    done
+    
+    echo "unknown"
 }
 
 PLATFORM=$(detect_platform)
@@ -27,8 +47,12 @@ PLATFORM=$(detect_platform)
 if [[ "$PLATFORM" == "unknown" ]]; then
     echo "❌ Could not detect Claude Code or Cursor installation"
     echo "   Please ensure you're running this from a project directory"
-    echo "   with .claude/ or .cursor/ subdirectory, or have"
-    echo "   ~/.claude/ or ~/.cursor/ in your home directory."
+    echo "   with one of these subdirectories:"
+    echo "     - .claude/ (Claude Code)"
+    echo "     - .cursor/ (Cursor)"
+    echo "     - .agents/ or .agent/ (generic)"
+    echo "   Or have one of these in your home directory:"
+    echo "     - ~/.claude/ or ~/.cursor/"
     exit 1
 fi
 
@@ -219,6 +243,24 @@ EOF
     fi
 fi
 
+# Install Cursor rule for Cursor platform
+if [[ "$PLATFORM" == "cursor" ]]; then
+    echo ""
+    echo "🔗 Installing Cursor rule..."
+    
+    # Generate and install Cursor rule
+    if [[ -f "$SKILL_DIR/SKILL.md" ]]; then
+        if "$SCRIPT_DIR/generate-cursor-rule" "$SKILL_DIR/SKILL.md" --install 2>/dev/null; then
+            echo "   ✅ Cursor rule installed to ~/.cursor/rules/omg-learn.mdc"
+        else
+            echo "   ⚠️  Could not auto-install Cursor rule. You can manually run:"
+            echo "      $SCRIPT_DIR/generate-cursor-rule $SKILL_DIR/SKILL.md --install"
+        fi
+    else
+        echo "   ⚠️  SKILL.md not found. Cursor rule not installed."
+    fi
+fi
+
 echo ""
 echo "✅ Installation complete!"
 echo ""
@@ -231,3 +273,10 @@ echo "To test the installation:"
 echo "  - Try saying 'omg!' in a prompt (should trigger the example pattern)"
 echo "  - Add custom patterns through the omg-learn skill workflow"
 echo ""
+
+if [[ "$PLATFORM" == "cursor" ]]; then
+    echo "Cursor-specific notes:"
+    echo "  - Skills are loaded via ~/.cursor/rules/omg-learn.mdc"
+    echo "  - The rule points to the SKILL.md file in this directory"
+    echo ""
+fi

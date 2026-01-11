@@ -15,7 +15,9 @@ When the user says "omg!" during a correction, create or update a skill AND opti
 ## Quick Reference
 
 - **CLI tool:** `omg-learn list|show|enable|disable|test|simulate|sync|export|import`
-- **Pattern files:** `~/.claude/omg-learn-patterns.json` (global), `.claude/omg-learn-patterns.json` (local)
+- **Pattern files:** 
+  - Claude Code: `~/.claude/omg-learn-patterns.json` (global), `.claude/omg-learn-patterns.json` (local)
+  - Cursor: `~/.cursor/omg-learn-patterns.json` (global), `.cursor/omg-learn-patterns.json` (local)
 - **Detailed guides:** See `references/` directory
 
 ## Workflow
@@ -25,8 +27,8 @@ When user says "omg!" during a correction:
 ### 0. Check Platform Hooks (First Time Only)
 
 Check if hooks are installed:
-- Claude Code: Check for `~/.claude/hooks/pretool-checker.sh`
-- Cursor: Check for `~/.cursor/hooks.json`
+- Claude Code: Check for `~/.claude/hooks/pretool-checker.sh` or `.claude/hooks/pretool-checker.sh`
+- Cursor: Check for `~/.cursor/hooks.json` or `.cursor/hooks.json`
 
 **If NOT installed:**
 - Explain platform hooks catch mistakes BEFORE they happen
@@ -34,9 +36,10 @@ Check if hooks are installed:
 - If yes: Run `./scripts/install-hooks.sh`
 - Platform hooks are OPTIONAL but recommended
 
-**Platform vs Skill Hooks:**
-- Platform hooks: Always active, prevent first mistake
-- Skill hooks: Only when skill loaded (limited use)
+**Platform Hooks vs Skill Hooks:**
+- **Platform hooks:** Work on both Claude Code and Cursor, always active, prevent first mistake
+- **Skill hooks:** Claude Code ONLY feature - hooks defined within skills themselves. Cursor does not support skill hooks.
+- This skill primarily uses platform hooks for maximum compatibility
 
 ### 1. Analyze the Correction
 
@@ -52,10 +55,12 @@ Example: "Use when analyzing database code" or "When deploying to production"
 ### 2. Check for Global Intent
 
 If user says "globally", "system wide", "everywhere":
-→ Create global skill in `~/.claude/skills/`
+→ Create global skill in `~/.claude/skills/` (Claude Code) or `~/.cursor/skills/` (Cursor)
 
 Otherwise:
-→ Create project-local skill in `.claude/skills/`
+→ Create project-local skill in `.claude/skills/` (Claude Code) or `.cursor/skills/` (Cursor)
+
+**Note:** Also supports `.agents/skills/` or `.agent/skills/` directories if present.
 
 ### 3. Search for Existing Skills
 
@@ -198,7 +203,9 @@ omg-learn enable <pattern-id> --local
 
 ### 8. Register the Skill
 
-The skill is auto-discovered from `~/.claude/skills/` or `.claude/skills/`.
+**Claude Code:** Skills are auto-discovered from `~/.claude/skills/` or `.claude/skills/`
+
+**Cursor:** Skills are loaded via rules in `~/.cursor/rules/`. Use `generate-cursor-rule` script to create a rule that points to the SKILL.md.
 
 **Done!** The skill and pattern (if created) are now active.
 
@@ -228,7 +235,8 @@ See `references/cli-reference.md` for full documentation.
 | Feature | Claude Code | Cursor | Notes |
 |---------|-------------|--------|-------|
 | Platform hooks | ✅ | ✅ | Different event names |
-| Skill hooks | ✅ | ❌ | Claude Code only |
+| Skill hooks | ✅ | ❌ | Claude Code only - not supported in Cursor |
+| Skill discovery | ✅ Auto | ✅ Via rules | Claude auto-discovers, Cursor uses .mdc rules |
 | CLI tool | ✅ | ✅ | Both platforms |
 | Pattern regex | ✅ | ✅ | Same syntax |
 | Check scripts | ✅ | ✅ | Bash scripts |
@@ -237,13 +245,30 @@ See `references/cli-reference.md` for full documentation.
 - Claude Code: `PreToolUse`, `UserPromptSubmit`
 - Cursor: `beforeShellExecution`, `beforeSubmitPrompt`
 
+**Skill Hooks vs Platform Hooks:**
+- **Skill hooks** are defined within a skill's YAML frontmatter (Claude Code only)
+- **Platform hooks** are defined in `.claude/hooks/` or `.cursor/hooks.json` (both platforms)
+- This skill uses **platform hooks** for cross-platform compatibility
+
 ## Installation
 
-Quick install:
+**Claude Code:**
 ```bash
 cd ~/.claude/skills/omg-learn
 ./scripts/install-hooks.sh
 ```
+
+**Cursor:**
+```bash
+# Install skill
+cd ~/.cursor/skills/omg-learn
+./scripts/install-hooks.sh
+
+# Generate and install Cursor rule
+./scripts/generate-cursor-rule SKILL.md --install
+```
+
+**Supported directories:** `.claude/`, `.cursor/`, `.agents/`, `.agent/`
 
 See README.md for full installation guide.
 
@@ -277,6 +302,8 @@ See `examples/` directory for detailed examples.
 ## Troubleshooting
 
 **Hooks not working?**
+
+Claude Code:
 ```bash
 # Check installation
 ls ~/.claude/hooks/pretool-checker.sh
@@ -284,6 +311,16 @@ cat ~/.claude/settings.json | grep hooks
 
 # Test manually
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit"}}' | ~/.claude/hooks/pretool-checker.sh
+```
+
+Cursor:
+```bash
+# Check installation
+ls ~/.cursor/hooks/before-shell.sh
+cat ~/.cursor/hooks.json
+
+# Test manually
+echo '{"command":"git commit"}' | ~/.cursor/hooks/before-shell.sh
 ```
 
 **Pattern not matching?**

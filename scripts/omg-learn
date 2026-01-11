@@ -184,12 +184,34 @@ class PatternManager:
         self.platform = platform
         home = Path.home()
 
+        # Support multiple directory conventions
         if platform == 'claude':
-            self.global_file = home / '.claude' / 'omg-learn-patterns.json'
-            self.local_file = Path('.claude') / 'omg-learn-patterns.json'
-        else:
-            self.global_file = home / '.cursor' / 'omg-learn-patterns.json'
-            self.local_file = Path('.cursor') / 'omg-learn-patterns.json'
+            # Try .claude first, then fall back to .agents/.agent
+            global_candidates = [
+                home / '.claude' / 'omg-learn-patterns.json',
+                home / '.agents' / 'omg-learn-patterns.json',
+                home / '.agent' / 'omg-learn-patterns.json',
+            ]
+            local_candidates = [
+                Path('.claude') / 'omg-learn-patterns.json',
+                Path('.agents') / 'omg-learn-patterns.json',
+                Path('.agent') / 'omg-learn-patterns.json',
+            ]
+        else:  # cursor
+            global_candidates = [
+                home / '.cursor' / 'omg-learn-patterns.json',
+                home / '.agents' / 'omg-learn-patterns.json',
+                home / '.agent' / 'omg-learn-patterns.json',
+            ]
+            local_candidates = [
+                Path('.cursor') / 'omg-learn-patterns.json',
+                Path('.agents') / 'omg-learn-patterns.json',
+                Path('.agent') / 'omg-learn-patterns.json',
+            ]
+        
+        # Use first existing file, or first candidate if none exist
+        self.global_file = next((f for f in global_candidates if f.exists()), global_candidates[0])
+        self.local_file = next((f for f in local_candidates if f.exists()), local_candidates[0])
 
     def list_patterns(self, scope='all', enabled_only=False) -> List[Dict]:
         """List patterns with metadata."""
@@ -506,11 +528,43 @@ def cmd_simulate(args, pm):
 # ============================================================================
 
 def detect_platform():
-    """Auto-detect platform."""
-    if (Path('.claude').exists() or (Path.home() / '.claude').exists()):
-        return 'claude'
-    elif (Path('.cursor').exists() or (Path.home() / '.cursor').exists()):
-        return 'cursor'
+    """
+    Auto-detect platform with symlink awareness.
+    
+    Supports .claude, .cursor, .agents, .agent directories.
+    Follows symlinks to determine actual platform.
+    """
+    # Check directories in order of preference
+    check_paths = [
+        Path('.claude'),
+        Path('.cursor'),
+        Path('.agents'),
+        Path('.agent'),
+        Path.home() / '.claude',
+        Path.home() / '.cursor',
+        Path.home() / '.agents',
+        Path.home() / '.agent',
+    ]
+    
+    for path in check_paths:
+        if path.exists():
+            # Resolve symlinks
+            real_path = path.resolve()
+            
+            # Determine platform from directory name
+            path_str = str(real_path).lower()
+            if '.claude' in path_str or str(path) == '.claude':
+                return 'claude'
+            elif '.cursor' in path_str or str(path) == '.cursor':
+                return 'cursor'
+            elif '.agents' in path_str or '.agent' in path_str:
+                # For generic dirs, check if claude or cursor exists
+                if (Path.home() / '.claude').exists():
+                    return 'claude'
+                elif (Path.home() / '.cursor').exists():
+                    return 'cursor'
+    
+    # Default to claude if nothing found
     return 'claude'
 
 
