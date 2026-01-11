@@ -1,333 +1,254 @@
-# OMG! Learning Skill
+# omg-learn - Learn from Mistakes, Never Repeat Them
 
-A skill for AI agents that enables learning from user corrections by creating or updating skills when users express frustration with "omg!" during corrections.
+A Claude Code/Cursor skill that learns from your corrections and creates **preventive patterns** to catch mistakes before they happen.
 
-## What it does
+## What is omg-learn?
 
-This skill provides a structured workflow for:
-- Detecting when users say "omg!" during corrections
-- Analyzing what went wrong and what should be preserved
-- Creating or updating skills to prevent the same mistakes
-- Handling both global and project-local skill creation
-- **Designing preventive hooks** (Claude Code only - see below)
+When you say **"omg!"** while correcting Claude, omg-learn:
 
-## Features by Platform
+1. **Creates a skill** from the correction (permanent knowledge)
+2. **Generates a preventive pattern** (catches it before it happens again)
+3. **Tests the pattern** to ensure it works
+4. **Enables it** globally or per-project
 
-| Feature | Claude Code | Goose | OpenSkills | Cursor |
-|---------|-------------|-------|------------|--------|
-| Skill creation workflow | ✅ | ✅ | ✅ | ✅ |
-| "omg!" detection | ✅ | ✅ | ✅ | ✅ |
-| Global/project skills | ✅ | ✅ | ✅ | ✅ |
-| **Platform hooks (NEW!)** | **✅** | ❌ | ❌ | **✅ Cursor** |
-| Skill hooks (limited) | ✅ Claude Code only | ❌ | ❌ | ❌ |
+**Result:** The mistake never happens again! 🎉
 
-## About Platform Hooks vs Skill Hooks
+## Quick Start
 
-### Platform Hooks (NEW - Recommended!)
+### Installation
 
-**Platform hooks** are always-active scripts that catch mistakes BEFORE they happen!
-
-**How they work:**
-- ✅ Always active (run before every command/tool use)
-- ✅ Catch mistakes BEFORE they happen (not after)
-- ✅ Check against configurable patterns
-- ✅ Can block, warn, or ask for confirmation
-- ✅ Extendable through simple JSON config file
-
-**Supported platforms:**
-- ✅ **Claude Code** - Full support
-- ✅ **Cursor** - Full support
-- ❌ **Goose, OpenSkills** - Not supported (yet)
-
-**Example:** After installing, you can create a pattern that blocks `npm test | head -50` and shows an error message BEFORE the command runs.
-
-### Skill Hooks (Claude Code Only - Limited)
-
-**Skill hooks** are hooks defined within skills that only activate when the skill is loaded.
-
-**Critical limitation**: Skill hooks **ONLY work when the skill is already loaded**!
-
-This means:
-- ❌ CANNOT catch the mistake that triggered "omg!" (skill isn't loaded yet)
-- ✅ CAN enforce safe behavior in **workflow skills** (explicitly invoked like `/deploy`, `/release`)
-- ❌ DON'T help for passive knowledge skills (they load too late)
-
-**When skill hooks are useful:**
-- Workflow skills you explicitly invoke (e.g., `/safe-commit`, `/deploy`, `/migrate`)
-- Skills that enforce process during intentional operations
-- NOT for learning from mistakes (they can't prevent the first occurrence)
-
-**Platform support:**
-- ✅ **Claude Code**: Full skill hook support
-- ❌ **Goose, OpenSkills, Cursor**: No skill hook support
-
-**Recommendation:** Use **platform hooks** (above) for catching mistakes, skill hooks for workflow enforcement.
-
-## Installation
-
-Choose the installation method for your platform. All methods work equally well!
-
-### Claude Code
-
-Skills are auto-discovered from skills directories - just copy and go!
-
-**Global (all projects):**
 ```bash
-cp -r omg-learn ~/.claude/skills/
+# Navigate to the skill directory
+cd ~/.claude/skills/omg-learn
+
+# Install hooks and CLI
+./scripts/install-hooks.sh
+
+# Verify installation
+omg-learn list
 ```
 
-**Project-specific:**
+### First Use
+
+1. Make a mistake (or Claude makes one)
+2. Say "omg!" in your response
+3. Claude will:
+   - Create a skill from the correction
+   - Offer to generate a preventive pattern
+   - Show you the pattern and test it
+   - Enable it for future protection
+
+**Example:**
+```
+User: "omg! You used npm test | head -20 and missed the test failures at the end!"
+
+Claude:
+- Creates skill about command output handling
+- Generates pattern: \|.*\bhead\b (matches pipe to head)
+- Tests it: ✓ Blocks "npm test | head -20"
+- Tests it: ✗ Allows "head package.json"
+- Enables pattern globally
+
+Next time: Hook blocks the command before execution!
+```
+
+## Features
+
+### 🛡️ Preventive Patterns
+
+Patterns catch mistakes **before** they happen:
+
+- **Block** dangerous operations (commit to main, force push to production)
+- **Warn** about risky actions (large file commits, modifying generated code)
+- **Ask** for confirmation (force push, deleting branches)
+
+### 🧠 AI-Powered Generation
+
+Claude analyzes your mistake and auto-generates:
+
+- Regex pattern to detect it
+- Exclude pattern to avoid false positives
+- Clear error message with suggested fix
+- Test cases to verify it works
+
+No regex knowledge needed!
+
+### 🔧 Powerful CLI
+
 ```bash
-mkdir -p .claude/skills
-cp -r omg-learn .claude/skills/
-git add .claude/skills/omg-learn
-git commit -m "Add omg-learn skill"
+omg-learn list                    # List all patterns
+omg-learn show <pattern-id>       # Show details
+omg-learn test <id> "input"       # Test a pattern
+omg-learn simulate "command"      # See what would happen
+omg-learn enable/disable <id>     # Toggle patterns
+omg-learn sync                    # Cross-project sync
+omg-learn export -o patterns.zip  # Share patterns
+omg-learn import patterns.zip     # Import patterns
 ```
 
-### Goose
+### 🌍 Cross-Platform
 
-Skills are auto-discovered from multiple skill directories - just copy to any of them!
+Works on both:
+- **Claude Code** - Full support
+- **Cursor** - Full support (different hook events)
 
-**Global (all projects) - choose one:**
+### 📦 Cross-Project Learning
+
+Patterns can be:
+- **Global** - Apply to all projects
+- **Local** - Project-specific only
+- **Synced** - Share between projects
+- **Exported** - Share with team (ZIP or JSON)
+
+## Examples
+
+### Block Commits to Main
+
+```json
+{
+  "id": "no-commit-to-main",
+  "description": "Block commits to main/master",
+  "hook": "PreToolUse",
+  "matcher": "Bash",
+  "pattern": "git\\s+commit",
+  "check_script": "./scripts/patterns/check-branch.sh",
+  "action": "block",
+  "message": "Direct commits to main not allowed. Use a feature branch."
+}
+```
+
+### Warn on Force Push
+
+```json
+{
+  "id": "warn-force-push",
+  "hook": "PreToolUse",
+  "matcher": "Bash",
+  "pattern": "git\\s+push.*(-f|--force)",
+  "action": "ask",
+  "message": "⚠️ Force push will overwrite remote history. Are you sure?"
+}
+```
+
+### Prevent Piping to Head
+
+```json
+{
+  "id": "no-head-with-commands",
+  "hook": "PreToolUse",
+  "matcher": "Bash",
+  "pattern": "\\|.*\\bhead\\b",
+  "exclude_pattern": "(cat |<|\\bhead\\s+[^|])",
+  "action": "block",
+  "message": "Using head with command output loses critical end output (like test results)"
+}
+```
+
+See `examples/` directory for more!
+
+## Architecture
+
+### Platform Hooks
+
+Always-active hooks that intercept:
+
+- **Shell commands** (before execution)
+- **File writes** (before writing)
+- **File edits** (before editing)
+- **User prompts** (before processing)
+
+### Pattern Matching
+
+Each pattern has:
+- **Regex** for simple matching
+- **Exclude patterns** to avoid false positives
+- **Check scripts** for complex logic (git branch, env checks)
+- **Actions** (block/warn/ask)
+
+### CLI Tools
+
+Pure Python implementation:
+- No external dependencies (jq removed!)
+- Works on Linux/Mac
+- Fast enough (~30ms per hook execution)
+- Extensible and maintainable
+
+## Documentation
+
+- **SKILL.md** - Main skill documentation (~200 lines)
+- **references/pattern-generation-guide.md** - Complete pattern guide
+- **references/cli-reference.md** - Full CLI documentation
+- **examples/basic-patterns.md** - Simple examples
+- **examples/advanced-patterns.md** - Complex patterns
+- **examples/workflows.md** - Common workflows
+
+## Platform Differences
+
+| Feature | Claude Code | Cursor |
+|---------|-------------|--------|
+| Hook events | PreToolUse | beforeShellExecution |
+| Prompt hooks | UserPromptSubmit | beforeSubmitPrompt |
+| Skill hooks | ✅ Yes | ❌ No |
+| Platform hooks | ✅ Yes | ✅ Yes |
+| Pattern format | Same | Same |
+
+## Performance
+
+**Hook execution:** ~30ms overhead per operation
+
+This is imperceptible to users since hooks only fire on user actions (not hot paths).
+
+**Benchmark:**
+- jq-based: 2ms
+- Python-based: 30ms
+- Trade-off: 28ms for zero dependencies + better capabilities
+
+## Troubleshooting
+
+### Hooks not triggering?
+
 ```bash
-# Preferred - compatible with Claude Code
-cp -r omg-learn ~/.claude/skills/
+# Check installation
+ls ~/.claude/hooks/pretool-checker.sh
+cat ~/.claude/settings.json | grep hooks
 
-# Or Goose-specific locations
-cp -r omg-learn ~/.config/goose/skills/
-cp -r omg-learn ~/.config/agents/skills/
+# Test manually
+echo '{"tool_name":"Bash","tool_input":{"command":"git commit"}}' | \
+  ~/.claude/hooks/pretool-checker.sh
 ```
 
-**Project-specific - choose one:**
+### Pattern not matching?
+
 ```bash
-# Preferred - compatible with Claude Code
-mkdir -p .claude/skills
-cp -r omg-learn .claude/skills/
+# Test the pattern
+omg-learn test no-commit-to-main "git commit -m 'fix'"
 
-# Or Goose-specific locations
-mkdir -p .goose/skills
-cp -r omg-learn .goose/skills/
-
-mkdir -p .agents/skills
-cp -r omg-learn .agents/skills/
+# Simulate full execution
+omg-learn simulate "git commit -m 'fix'"
 ```
 
-**Tip:** Use `.claude/skills/` for maximum compatibility across platforms!
+### Enable debug logging
 
-### OpenSkills
-
-**Global:**
+Uncomment in hook scripts:
 ```bash
-cp -r omg-learn ~/.agent/skills/
-openskills sync -y
+# Line 36 in pretool-checker.sh:
+echo "DEBUG: Tool: $TOOL_NAME, Input: $TOOL_INPUT" >> /tmp/omg-learn-hook.log
 ```
 
-**Project-specific:**
-```bash
-cp -r omg-learn .agent/skills/
-openskills sync -y
-```
+## Contributing
 
-### Cursor
+Found a bug? Have a pattern to share?
 
-**Global:**
-```bash
-cp -r omg-learn ~/.agent/skills/
-openskills sync -y
-```
-
-**Project-specific:**
-```bash
-cp -r omg-learn .agent/skills/
-openskills sync -y
-```
-
-### Mixed Teams (Multiple Tools)
-
-If your team uses different tools, use symlinks for compatibility:
-```bash
-# In your project root - choose the pattern that works for your team
-ln -s .claude/skills .agent/skills   # OpenSkills/Cursor ← Claude Code
-ln -s .claude/skills .goose/skills   # Goose ← Claude Code
-ln -s .goose/skills .agent/skills    # OpenSkills ← Goose
-```
-
-**Recommendation:** Use `.claude/skills/` as your primary location since it's supported by both Claude Code and Goose (Goose checks `.claude/skills/` first). Then symlink for other tools as needed.
-
-## Installing Platform Hooks (Optional but Recommended!)
-
-Platform hooks catch mistakes BEFORE they happen. This is optional - omg-learn works fine without them, but hooks make it much more powerful!
-
-### Automatic Installation (Recommended)
-
-The omg-learn skill will offer to install hooks automatically the first time you use it. Just say "yes" when prompted!
-
-### Manual Installation
-
-**For Claude Code or Cursor:**
-
-1. Navigate to where you installed omg-learn:
-   ```bash
-   cd ~/.claude/skills/omg-learn  # or ~/.agent/skills/omg-learn for Cursor
-   ```
-
-2. Run the installation script:
-   ```bash
-   ./scripts/install-hooks.sh
-   ```
-
-3. Choose scope:
-   - **Global** (all projects) - Recommended for most users
-   - **Project-local** (current project only) - For project-specific patterns
-
-4. The script will:
-   - Auto-detect your platform (Claude Code or Cursor)
-   - Install hook scripts to the appropriate location
-   - Create initial config with "omg!" detection example
-   - Register hooks in your settings
-
-### What Gets Installed
-
-**Claude Code:**
-- `~/.claude/hooks/pretool-checker.sh` - Checks before tool use
-- `~/.claude/hooks/prompt-checker.sh` - Checks user prompts
-- `~/.claude/omg-learn-patterns.json` - Pattern configuration file
-
-**Cursor:**
-- `~/.cursor/hooks/before-shell.sh` - Checks before shell commands
-- `~/.cursor/omg-learn-patterns.json` - Pattern configuration file
-
-### Managing Patterns
-
-**View current patterns:**
-```bash
-cat ~/.claude/omg-learn-patterns.json  # or ~/.cursor/omg-learn-patterns.json
-```
-
-**Disable a pattern:**
-Edit the patterns file and set `"enabled": false`
-
-**Add patterns:**
-Use the omg-learn workflow (it will ask if you want to create a pattern after creating a skill)
-
-## Usage
-
-### Recommended: Create a Custom Command
-
-Instead of relying on "omg!" detection, we recommend creating an explicit command in your editor. This is clearer and more reliable.
-
-**For Cursor**, create `.cursor/commands/omg.md`:
-```markdown
-Oh no! You just did something bad. You'll need to fix that, but FIRST let's make sure that you learn and don't do it again. Everyone makes mistakes, but it's frustrating to never learn. Luckily, you CAN learn.
-
-1. Run `openskills read omg-learn` and follow that process.
-2. git commit the new skill
-  * unstage other changes if necessary (but do not lose them!)
-  * add and commit just the skill changes or additions
-  * if on a branch, if possible, cherry-pick that to `main`
-  * re-stage anything else uncommited
-3. now, using the new skill, correct the mistake
-4. and back to your regular work, smarter and wiser
-```
-
-**For Claude Code:**
-
-Create a deliberate workflow when you make a mistake that should be learned:
-
-1. **Invoke the skill:**
-   ```
-   /omg-learn
-   ```
-   Or let Claude detect "omg!" in your corrections
-
-2. **Follow the guided process:**
-   - Claude analyzes what went wrong
-   - Determines if skill should be global or project-local
-   - Checks for existing skills to update
-   - Proposes the new/updated skill content
-   - Creates the skill file after your approval
-   - Skill is immediately available (auto-discovered)
-
-3. **Commit the skill (for project skills):**
-   ```bash
-   git add .claude/skills/<skill-name>
-   git commit -m "Add <skill-name> skill: <brief description>"
-   ```
-
-4. **Use the new skill:**
-   Claude now has persistent knowledge and won't make that mistake again!
-
-**Tip:** For team projects, commit skills to version control so everyone benefits from the learning.
-
-**For Goose:**
-
-Goose automatically discovers and loads skills - just invoke when you need it:
-
-1. **Trigger the skill:**
-   - Say "omg!" during a correction (Goose will auto-detect and match the skill)
-   - Or explicitly request: "Use the omg-learn skill"
-
-2. **Follow the guided workflow:**
-   - Goose analyzes the correction and determines what knowledge to preserve
-   - Proposes creating or updating a skill with proper structure
-   - Shows the full skill content for your approval
-   - Creates the skill file after approval
-   - Skill is immediately available (auto-discovered on next session)
-
-3. **Commit for team sharing (project skills):**
-   ```bash
-   git add .claude/skills/<skill-name>  # or .goose/skills/
-   git commit -m "Add <skill-name> skill: <brief description>"
-   ```
-
-4. **Benefit from persistent learning:**
-   Goose now has this knowledge permanently and won't make the same mistake!
-
-**Note:** Goose loads skills at session start, so restart your session or explicitly invoke to use new skills immediately.
-
-### Alternative: "omg!" Detection
-
-If you prefer, the AI can also detect when you say "omg!" during a correction:
-
-1. **Analyze the correction** - Identify what went wrong
-2. **Check for global intent** - Determine if it should be global or project-local
-3. **Search existing skills** - Look for related skills to update
-4. **Propose changes** - Show what will be created/updated
-5. **Create/update skill** - After user approval
-6. **Register the skill** - Run `openskills sync -y`
-
-## Dependencies
-
-**All Platforms:**
-- [`skill-creator`](https://github.com/anthropics/skills/tree/main/skills/skill-creator) skill
-  - Pre-installed in Claude Code and Goose
-  - Install separately for OpenSkills/Cursor
-
-**Platform-Specific:**
-- **OpenSkills/Cursor**: [`openskills`](https://github.com/numman-ali/openskills) CLI tool
-- **Claude Code/Goose**: No additional tools needed (built-in skill support)
-
-**For Platform Hooks (Optional):**
-- `jq` - JSON parser for hook scripts (usually pre-installed on Mac/Linux)
-  - Install: `brew install jq` (Mac) or `sudo apt install jq` (Linux)
-  - Hooks will warn if jq is not available and suggest manual configuration
-
-## Structure
-
-This skill follows the standard skill format:
-- `SKILL.md` - Main skill file with YAML frontmatter
-- Progressive disclosure principle
-- Concise, action-oriented content
-
-## Best Practices
-
-**Keep your base instructions minimal.** Too many instructions dilute their impact:
-
-- **AGENTS.md**: Include only your project's MOST CRUCIAL guidance. Add up-front detail on how to load skills on demand (e.g., "Run `openskills read <skill-name>` when you need specific knowledge"). Let skills handle the details.
-- **Cursor Rules**: Same principle - too many rules and they lose weight. Keep it focused.
-
-Skills are meant to be loaded on-demand for specific situations, keeping your agent's base context clean and effective.
+1. Open an issue
+2. Submit a PR
+3. Share your patterns (export and share the ZIP!)
 
 ## License
 
-This skill is released into the public domain under the [Unlicense](https://unlicense.org/). Use it however you like!
+See LICENSE file.
+
+## Credits
+
+Built with Claude Sonnet 4.5 using the Claude Code CLI.
+
+**Co-Authored-By:** Claude Sonnet 4.5 <noreply@anthropic.com>
