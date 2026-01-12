@@ -110,16 +110,25 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     chmod +x "$HOOKS_DIR/omg-learn-tool-checker.py"
     cp "$SCRIPT_DIR/hooks/omg-learn-prompt-checker.py" "$HOOKS_DIR/"
     chmod +x "$HOOKS_DIR/omg-learn-prompt-checker.py"
-    echo "   ✅ omg-learn-tool-checker.py"
-    echo "   ✅ omg-learn-prompt-checker.py"
+    cp "$SCRIPT_DIR/hooks/omg-learn-post-tool-handler.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/omg-learn-post-tool-handler.py"
+    echo "   ✅ omg-learn-tool-checker.py (PreToolUse)"
+    echo "   ✅ omg-learn-prompt-checker.py (UserPromptSubmit)"
+    echo "   ✅ omg-learn-post-tool-handler.py (PostToolUse)"
 elif [[ "$PLATFORM" == "cursor" ]]; then
     echo "📝 Installing Cursor hooks..."
     cp "$SCRIPT_DIR/hooks/before-shell.py" "$HOOKS_DIR/"
     chmod +x "$HOOKS_DIR/before-shell.py"
     cp "$SCRIPT_DIR/hooks/before-prompt.py" "$HOOKS_DIR/"
     chmod +x "$HOOKS_DIR/before-prompt.py"
-    echo "   ✅ before-shell.py"
-    echo "   ✅ before-prompt.py"
+    cp "$SCRIPT_DIR/hooks/after-shell.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/after-shell.py"
+    cp "$SCRIPT_DIR/hooks/after-tool.py" "$HOOKS_DIR/"
+    chmod +x "$HOOKS_DIR/after-tool.py"
+    echo "   ✅ before-shell.py (beforeShellExecution)"
+    echo "   ✅ before-prompt.py (beforeSubmitPrompt)"
+    echo "   ✅ after-shell.py (afterShellExecution)"
+    echo "   ✅ after-tool.py (afterMCPExecution)"
 fi
 
 # Create initial patterns file if it doesn't exist
@@ -183,6 +192,17 @@ if [[ "$PLATFORM" == "claude" ]]; then
                 ]
               }
             ],
+            "PostToolUse": [
+              {
+                "matcher": "Bash|Write|Edit",
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "'"$HOOKS_DIR/omg-learn-post-tool-handler.py"'"
+                  }
+                ]
+              }
+            ],
             "UserPromptSubmit": [
               {
                 "hooks": [
@@ -212,13 +232,17 @@ elif [[ "$PLATFORM" == "cursor" ]]; then
     # Determine paths: relative for project-local, absolute for global
     if [[ "$SCOPE" == "global" ]]; then
         # Global: use absolute paths
-        SHELL_HOOK_PATH="$HOOKS_DIR/before-shell.py"
-        PROMPT_HOOK_PATH="$HOOKS_DIR/before-prompt.py"
+        BEFORE_SHELL_HOOK="$HOOKS_DIR/before-shell.py"
+        BEFORE_PROMPT_HOOK="$HOOKS_DIR/before-prompt.py"
+        AFTER_SHELL_HOOK="$HOOKS_DIR/after-shell.py"
+        AFTER_TOOL_HOOK="$HOOKS_DIR/after-tool.py"
     else
         # Project-local: use relative paths (relative to hooks.json location)
         # hooks.json is in .cursor/, so path is ./hooks/script.py
-        SHELL_HOOK_PATH="./hooks/before-shell.py"
-        PROMPT_HOOK_PATH="./hooks/before-prompt.py"
+        BEFORE_SHELL_HOOK="./hooks/before-shell.py"
+        BEFORE_PROMPT_HOOK="./hooks/before-prompt.py"
+        AFTER_SHELL_HOOK="./hooks/after-shell.py"
+        AFTER_TOOL_HOOK="./hooks/after-tool.py"
     fi
 
     # Create hooks file if it doesn't exist
@@ -233,12 +257,22 @@ elif [[ "$PLATFORM" == "cursor" ]]; then
   "hooks": {
     "beforeShellExecution": [
       {
-        "command": "$SHELL_HOOK_PATH"
+        "command": "$BEFORE_SHELL_HOOK"
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "$AFTER_SHELL_HOOK"
       }
     ],
     "beforeSubmitPrompt": [
       {
-        "command": "$PROMPT_HOOK_PATH"
+        "command": "$BEFORE_PROMPT_HOOK"
+      }
+    ],
+    "afterMCPExecution": [
+      {
+        "command": "$AFTER_TOOL_HOOK"
       }
     ]
   }
@@ -248,8 +282,10 @@ EOF
     else
         echo "   ℹ️  Hooks file already exists: $HOOKS_FILE"
         echo "      Please manually add to hooks.json:"
-        echo "      - beforeShellExecution: $SHELL_HOOK_PATH"
-        echo "      - beforeSubmitPrompt: $PROMPT_HOOK_PATH"
+        echo "      - beforeShellExecution: $BEFORE_SHELL_HOOK"
+        echo "      - afterShellExecution: $AFTER_SHELL_HOOK"
+        echo "      - beforeSubmitPrompt: $BEFORE_PROMPT_HOOK"
+        echo "      - afterMCPExecution: $AFTER_TOOL_HOOK"
     fi
 fi
 

@@ -169,8 +169,46 @@ Link back to skill with `skill_reference` field
 
 **Pattern types (for reference - prefer top to bottom):**
 1. **Context injection patterns (🌟 MAGIC SAUCE):** Add guidance to Claude's prompt based on keywords - proactive, non-disruptive (Claude Code: true context, Cursor: warning)
-2. **Preventive patterns:** Block or warn before dangerous operations - reactive, more disruptive
-3. **Ask patterns (LAST RESORT):** Confirmation dialogs - most disruptive, use sparingly
+2. **PostToolUse patterns (AUTOMATION):** Run commands after tool execution - auto-formatting, linting, testing
+3. **Preventive patterns:** Block or warn before dangerous operations - reactive, more disruptive
+4. **Ask patterns (LAST RESORT):** Confirmation dialogs - most disruptive, use sparingly
+
+### 6a. PostToolUse Patterns for Automation (Optional)
+
+In addition to skill-linked context injection patterns, you can create PostToolUse patterns for automation:
+
+**Use PostToolUse for:**
+- Auto-formatting files (ruff, prettier, black, etc.)
+- Running linters after save (ruff check, eslint, etc.)
+- Compiling code automatically
+- Running tests on file changes
+- Any automation that should happen AFTER tool execution
+
+**PostToolUse pattern structure:**
+```json
+{
+  "id": "auto-format-python",
+  "description": "Auto-format Python files with ruff",
+  "hook": "PostToolUse",
+  "matcher": "Write|Edit",
+  "file_pattern": "\\.py$",
+  "action": "run",
+  "command": "ruff format {file_path}",
+  "command_on_success": true,
+  "timeout": 10,
+  "show_output": false,
+  "enabled": true
+}
+```
+
+**New fields for PostToolUse:**
+- `file_pattern`: Regex to match file extensions (e.g., `\\.py$`)
+- `command`: Shell command with template variables: `{file_path}`, `{file_name}`, `{file_dir}`, `{file_ext}`
+- `command_on_success`: Only run if tool succeeded (default: false)
+- `timeout`: Command timeout in seconds (default: 30)
+- `show_output`: Show command output to user (default: false)
+
+**See:** `examples/basic-patterns.md` for complete PostToolUse examples
 
 ### 7. Generate and Test Pattern
 

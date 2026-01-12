@@ -261,6 +261,101 @@ Other skill-pattern examples:
 - `production-deployment` skill → triggers on: production, deploy, release
 - `authentication-patterns` skill → triggers on: auth, login, oauth, jwt
 
+## PostToolUse Patterns (Automation)
+
+PostToolUse patterns run AFTER tool execution to automate tasks like formatting, linting, and testing.
+
+### 11. Auto-format Python Files with Ruff
+
+```json
+{
+  "id": "auto-format-python",
+  "description": "Automatically run ruff format on Python files after save",
+  "hook": "PostToolUse",
+  "matcher": "Write|Edit",
+  "file_pattern": "\\.py$",
+  "action": "run",
+  "command": "ruff format {file_path}",
+  "command_on_success": true,
+  "timeout": 10,
+  "show_output": false,
+  "message": "Python file formatted with ruff",
+  "enabled": true,
+  "note": "Automatically formats Python files on save"
+}
+```
+
+**How it works:**
+1. You write or edit a Python file
+2. Pattern matches `*.py` files
+3. Runs `ruff format` automatically
+4. File is formatted silently (show_output: false)
+
+### 12. Auto-check Python Files with Ruff
+
+```json
+{
+  "id": "auto-check-python",
+  "description": "Run ruff check on Python files after save",
+  "hook": "PostToolUse",
+  "matcher": "Write|Edit",
+  "file_pattern": "\\.py$",
+  "action": "run",
+  "command": "ruff check {file_path}",
+  "command_on_success": true,
+  "timeout": 10,
+  "show_output": true,
+  "message": "Ruff check completed",
+  "enabled": true,
+  "note": "Shows linting issues after saving Python files"
+}
+```
+
+**How it works:**
+1. You write or edit a Python file
+2. Pattern matches `*.py` files
+3. Runs `ruff check` automatically
+4. Shows output to user (show_output: true)
+5. You see any linting issues immediately
+
+### 13. Auto-format JavaScript/TypeScript with Prettier
+
+```json
+{
+  "id": "auto-format-js",
+  "description": "Run prettier on JS/TS files",
+  "hook": "PostToolUse",
+  "matcher": "Write|Edit",
+  "file_pattern": "\\.(js|ts|jsx|tsx)$",
+  "action": "run",
+  "command": "prettier --write {file_path}",
+  "command_on_success": true,
+  "timeout": 10,
+  "show_output": false,
+  "message": "JavaScript formatted with prettier",
+  "enabled": true,
+  "note": "Auto-formats JavaScript and TypeScript files"
+}
+```
+
+**Pattern fields explained:**
+- `hook`: "PostToolUse" - Runs AFTER tool execution
+- `matcher`: "Write|Edit" - Triggers on Write or Edit tools
+- `file_pattern`: Regex to match file extensions (e.g., `\\.py$` for *.py files)
+- `action`: "run" - Execute a command
+- `command`: Template with variables: `{file_path}`, `{file_name}`, `{file_dir}`, `{file_ext}`
+- `command_on_success`: Only run if tool succeeded (no errors)
+- `timeout`: Max execution time in seconds
+- `show_output`: Whether to show command output to user
+
+**Use cases for PostToolUse:**
+- Auto-formatting (ruff, prettier, black, etc.)
+- Linting (ruff check, eslint, etc.)
+- Running tests on save
+- Generating documentation
+- Compiling code
+- Any automation after file changes
+
 ## Usage Examples
 
 ### Enable a Pattern

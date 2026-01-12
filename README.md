@@ -201,10 +201,25 @@ See `examples/` directory for more!
 
 Always-active hooks that intercept:
 
-- **Shell commands** (before execution)
-- **File writes** (before writing)
-- **File edits** (before editing)
+- **Shell commands** (before and after execution)
+- **File writes** (before and after writing)
+- **File edits** (before and after editing)
 - **User prompts** (before processing)
+
+**Hook Types:**
+
+| Hook | When | Use For |
+|------|------|---------|
+| PreToolUse | Before tool execution | Prevention, safety checks, warnings |
+| PostToolUse | After tool execution | Automation, formatting, linting, testing |
+| UserPromptSubmit | On user prompt | Context injection, skill reminders |
+
+**PostToolUse hooks enable automation:**
+- Auto-format files with ruff, prettier, black
+- Run linters after save (ruff check, eslint)
+- Execute tests automatically
+- Compile code on changes
+- Any post-execution automation
 
 ### Pattern Matching
 
